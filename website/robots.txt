@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nuo-mirror.github.io/nuo-agent-launcher/sitemap.xml
