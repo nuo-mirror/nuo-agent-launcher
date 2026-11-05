@@ -36,7 +36,7 @@ const DEFAULT_CONFIG = {
   updateMirror: 'auto',
   // 备用更新源：可公开访问的 JSON 清单地址（留空则走 GitHub API 官方源）
   // 适用场景：GitHub 不可达时，用自建清单 + 其它下载地址替代
-  updateFeedUrl: '',
+  updateFeedUrl: 'https://raw.githubusercontent.com/nuo-mirror/nuo-agent-launcher/main/update.json',
 }
 
 function loadConfig() {
