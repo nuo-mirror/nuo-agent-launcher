@@ -25,6 +25,7 @@ export default function LogsPage() {
   const [autoScroll, setAutoScroll] = useState(true)
   const [filter, setFilter] = useState('')
   const [levelFilter, setLevelFilter] = useState('all')
+  const [sharing, setSharing] = useState(false)
   const logBoxRef = useRef(null)
 
   const refresh = async (cat) => {
@@ -63,6 +64,17 @@ export default function LogsPage() {
     }
   }
 
+  const handleShare = async () => {
+    setSharing(true)
+    try {
+      const url = await window.nal.logs.share(activeCategory)
+      window.nal.system.openUrl(url).catch(() => {})
+      alert('已上传到 mclo.gs，可分享此链接：\n' + url)
+    } catch (e) {
+      alert('分享失败：' + e.message)
+    } finally { setSharing(false) }
+  }
+
   const handleClear = async () => {
     if (!confirm(`确定清空 ${CATEGORIES.find((c) => c.id === activeCategory)?.name}？`)) return
     await window.nal.logs.clear(activeCategory)
@@ -77,6 +89,7 @@ export default function LogsPage() {
           <h1 className="text-xl" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="clipboard" size={20} /> 日志 / 记录</h1>
           <div className="flex gap-2">
             <button className="btn btn-ghost btn-sm" onClick={() => refresh()}><Icon name="refresh" size={14} /> 刷新</button>
+            <button className="btn btn-ghost btn-sm" onClick={handleShare} disabled={sharing}>{sharing ? '上传中...' : '分享'}</button>
             <button className="btn btn-ghost btn-sm" onClick={handleExport}>导出</button>
             <button className="btn btn-ghost btn-sm" onClick={handleClear}>清空</button>
           </div>

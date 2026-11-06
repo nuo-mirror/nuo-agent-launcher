@@ -3,6 +3,7 @@ import { Routes, Route, NavLink } from 'react-router-dom'
 import HomePage from './pages/Home.jsx'
 import DownloadPage from './pages/Download.jsx'
 import ModsPage from './pages/Mods.jsx'
+import ContentPage from './pages/Content.jsx'
 import MultiplayerPage from './pages/Multiplayer.jsx'
 import AIPage from './pages/AI.jsx'
 import LogsPage from './pages/Logs.jsx'
@@ -26,6 +27,7 @@ const BASE_NAV_ITEMS = [
   { to: '/', label: '主页', icon: 'home' },
   { to: '/download', label: '下载', icon: 'download' },
   { to: '/mods', label: '模组', icon: 'mods' },
+  { to: '/content', label: '资源', icon: 'folder' },
   { to: '/seeds', label: '种子查看器', icon: 'map', img: navMapTex },
   { to: '/multiplayer', label: '联机', icon: 'users' },
   { to: '/ai', label: 'AI 助手', icon: 'ai' },
@@ -215,6 +217,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/download" element={<DownloadPage />} />
           <Route path="/mods" element={<ModsPage />} />
+          <Route path="/content" element={<ContentPage />} />
           <Route path="/seeds" element={<Suspense fallback={null}><SeedsPage /></Suspense>} />
           <Route path="/multiplayer" element={<MultiplayerPage />} />
           <Route path="/ai" element={<AIPage />} />

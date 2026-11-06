@@ -3,6 +3,7 @@
 // 同时推送实时日志到前端，持久化到 logs 目录
 const fs = require('fs')
 const path = require('path')
+const https = require('https')
 
 const LOGS_DIR = process.env.NAL_LOGS_DIR || path.join(process.env.APPDATA || '', 'NuoAgentLauncher', 'logs')
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB 单文件
@@ -100,6 +101,36 @@ function register(ipcMain, getMainWindow) {
     if (!CATEGORIES.includes(category)) return null
     const fs2 = getFileStreamCached(category)
     return fs2.file
+  })
+  // 一键分享日志到 mclo.gs（匿名粘贴服务，返回可分享的链接）
+  ipcMain.handle('logs:share', async (_e, category) => {
+    if (!CATEGORIES.includes(category)) throw new Error('未知日志类别')
+    const file = path.join(LOGS_DIR, `${category}.log`)
+    if (!fs.existsSync(file)) throw new Error('暂无日志内容')
+    let content = fs.readFileSync(file, 'utf8')
+    if (content.length > 2 * 1024 * 1024) content = content.slice(-2 * 1024 * 1024) // mclo.gs 上限约 2.5MB
+    const body = 'content=' + encodeURIComponent(content)
+    const result = await new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: 'api.mclo.gs',
+        path: '/1/log',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(body) },
+        timeout: 20000,
+      }, (res) => {
+        let d = ''
+        res.on('data', (c) => { d += c })
+        res.on('end', () => {
+          try { resolve(JSON.parse(d)) } catch (e) { reject(new Error('解析返回失败')) }
+        })
+      })
+      req.on('timeout', () => req.destroy(new Error('上传超时')))
+      req.on('error', reject)
+      req.write(body)
+      req.end()
+    })
+    if (!result || !result.success || !result.url) throw new Error('mclo.gs 上传失败')
+    return result.url
   })
 }
 

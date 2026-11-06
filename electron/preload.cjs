@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('nal', {
     getRecent: (category, limit) => invoke('logs:recent', category, limit),
     clear: (category) => invoke('logs:clear', category),
     exportLogs: (category) => invoke('logs:export', category),
+    share: (category) => invoke('logs:share', category),
     onNewLog: (cb) => onEvent('logs:new', cb),
   },
   // 下载
@@ -42,8 +43,12 @@ contextBridge.exposeInMainWorld('nal', {
     listFabric: (gameVersion) => invoke('download:fabric', gameVersion),
     listForge: (gameVersion) => invoke('download:forge', gameVersion),
     listOptifine: (gameVersion) => invoke('download:optifine', gameVersion),
+    listQuilt: (gameVersion) => invoke('download:quilt', gameVersion),
+    listNeoForge: (gameVersion) => invoke('download:neoforge', gameVersion),
     installVersion: (versionId, source) => invoke('download:install', versionId, source),
     installFabric: (gameVersion, loaderVersion) => invoke('download:install-fabric', gameVersion, loaderVersion),
+    installQuilt: (gameVersion, loaderVersion) => invoke('download:install-quilt', gameVersion, loaderVersion),
+    installNeoForge: (gameVersion, neoforgeVersion) => invoke('download:install-neoforge', gameVersion, neoforgeVersion),
     cancel: (taskId) => invoke('download:cancel', taskId),
     listInstalled: () => invoke('download:installed'),
     deleteVersion: (versionId) => invoke('download:delete', versionId),
@@ -65,6 +70,7 @@ contextBridge.exposeInMainWorld('nal', {
     onLog: (cb) => onEvent('launcher:log', cb),
     onState: (cb) => onEvent('launcher:state', cb),
     killLast: () => invoke('launcher:kill'),
+    playtime: () => invoke('launcher:playtime'),
   },
   // 账号
   account: {
@@ -85,6 +91,7 @@ contextBridge.exposeInMainWorld('nal', {
     install: (opts) => invoke('mods:install', opts),
     listInstalled: (instanceId) => invoke('mods:list-installed', instanceId),
     deleteMod: (instanceId, filename) => invoke('mods:delete', instanceId, filename),
+    setEnabled: (instanceId, filename, enabled) => invoke('mods:set-enabled', instanceId, filename, enabled),
     onProgress: (cb) => onEvent('mods:progress', cb),
   },
   // 基岩版（Windows UWP）
@@ -142,6 +149,23 @@ contextBridge.exposeInMainWorld('nal', {
     run: (versionId) => invoke('diagnose:run', versionId),
     fix: (versionId, fixKey, extra) => invoke('diagnose:fix', versionId, fixKey, extra),
     analyze: (versionId) => invoke('diagnose:analyze', versionId),
+  },
+  // 实例内容管理（资源包/光影/存档/截图/整合包/模组更新）
+  content: {
+    listResourcePacks: (id) => invoke('content:resourcepacks', id),
+    listShaderPacks: (id) => invoke('content:shaderpacks', id),
+    listSaves: (id) => invoke('content:saves', id),
+    getSaveIcon: (id, name) => invoke('content:save-icon', id, name),
+    listScreenshots: (id) => invoke('content:screenshots', id),
+    getScreenshotData: (id, name) => invoke('content:screenshot-data', id, name),
+    deleteFile: (id, sub, name) => invoke('content:delete', id, sub, name),
+    openDir: (id, sub) => invoke('content:open-dir', id, sub),
+    installFromModrinth: (id, pid, sub) => invoke('content:install-modrinth', id, pid, sub),
+    exportSave: (id, name) => invoke('content:export-save', id, name),
+    exportModpack: (id) => invoke('content:export-modpack', id),
+    importModpack: (id) => invoke('content:import-modpack', id),
+    checkModUpdates: (id) => invoke('content:check-mod-updates', id),
+    updateMod: (id, pid, vid, old) => invoke('content:update-mod', id, pid, vid, old),
   },
 })
 

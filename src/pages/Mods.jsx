@@ -8,6 +8,7 @@ const LOADER_OPTIONS = [
   { value: 'fabric', label: 'Fabric' },
   { value: 'forge', label: 'Forge' },
   { value: 'quilt', label: 'Quilt' },
+  { value: 'neoforge', label: 'NeoForge' },
 ]
 const SORT_OPTIONS = [
   { value: 'downloads', label: '按下载量' },
@@ -53,9 +54,12 @@ export default function ModsPage() {
   const [detail, setDetail] = useState(null) // 模组版本选择弹窗数据
   const [modVersions, setModVersions] = useState([])
   const [versionsLoading, setVersionsLoading] = useState(false)
-  const [fabricGame, setFabricGame] = useState('1.21.1')
-  const [fabricList, setFabricList] = useState([])
-  const [fabricInstalling, setFabricInstalling] = useState('')
+  const [loaderType, setLoaderType] = useState('fabric')
+  const [loaderGame, setLoaderGame] = useState('1.21.1')
+  const [loaderList, setLoaderList] = useState([])
+  const [loaderInstalling, setLoaderInstalling] = useState('')
+  const [updates, setUpdates] = useState(null) // 模组更新检查结果
+  const [checkingUpdates, setCheckingUpdates] = useState(false)
   const logRef = useRef(null)
   const scrollRef = useRef(null)
   const sentinelRef = useRef(null)
@@ -84,11 +88,15 @@ export default function ModsPage() {
       const mods = await window.nal.mods.listInstalled(id)
       setInstalledMods(mods || [])
     } catch { setInstalledMods([]) }
-    // 推断加载器：fabric-* 前缀
+    // 推断加载器
     if (id.startsWith('fabric-')) {
       const rest = id.replace(/^fabric-/, '')
       const parts = rest.split('-')
       setInstanceInfo({ loader: 'fabric', gameVersion: parts.slice(1).join('-') || parts[1] })
+    } else if (id.startsWith('quilt-loader-')) {
+      setInstanceInfo({ loader: 'quilt', gameVersion: id.split('-').slice(3).join('-') || id })
+    } else if (id.includes('neoforge')) {
+      setInstanceInfo({ loader: 'neoforge', gameVersion: id })
     } else if (id.includes('forge')) {
       setInstanceInfo({ loader: 'forge', gameVersion: id })
     } else {
@@ -189,29 +197,64 @@ export default function ModsPage() {
     }
   }
 
-  // Fabric 安装
-  const loadFabric = async (gv) => {
-    setFabricList([])
-    try { setFabricList(await window.nal.download.listFabric(gv)) } catch { setError('获取 Fabric 版本失败') }
-  }
-  const handleInstallFabric = async (lv) => {
-    setFabricInstalling(`正在安装 Fabric ${lv} for ${fabricGame}...`)
-    pushLog(`开始安装 Fabric ${lv} for ${fabricGame}`)
+  // 加载器安装（Fabric / Quilt / NeoForge）
+  const loadLoaderList = async (type, gv) => {
+    setLoaderList([])
     try {
-      const r = await window.nal.download.installFabric(fabricGame, lv)
-      if (r.success) {
-        pushLog(`Fabric 安装完成: ${r.instanceId}`)
+      let list = []
+      if (type === 'fabric') list = await window.nal.download.listFabric(gv)
+      else if (type === 'quilt') list = await window.nal.download.listQuilt(gv)
+      else if (type === 'neoforge') list = await window.nal.download.listNeoForge(gv)
+      setLoaderList(list || [])
+    } catch { setError(`获取 ${type} 版本失败`) }
+  }
+  const handleInstallLoader = async (version) => {
+    const label = `${loaderType} ${version} for ${loaderGame}`
+    setLoaderInstalling(`正在安装 ${label}...`)
+    pushLog(`开始安装 ${label}`)
+    try {
+      let r
+      if (loaderType === 'fabric') r = await window.nal.download.installFabric(loaderGame, version)
+      else if (loaderType === 'quilt') r = await window.nal.download.installQuilt(loaderGame, version)
+      else if (loaderType === 'neoforge') r = await window.nal.download.installNeoForge(loaderGame, version)
+      if (r?.success) {
+        pushLog(`${loaderType} 安装完成: ${r.instanceId}`)
         await refreshInstances()
         setInstanceId(r.instanceId)
       } else {
-        pushLog('Fabric 安装失败: ' + r.error)
-        setError(r.error)
+        pushLog(`${loaderType} 安装失败: ` + (r?.error || '未知错误'))
+        setError(r?.error || '安装失败')
       }
     } catch (e) {
-      pushLog('Fabric 安装失败: ' + e.message)
+      pushLog(`${loaderType} 安装失败: ` + e.message)
     } finally {
-      setFabricInstalling('')
+      setLoaderInstalling('')
     }
+  }
+
+  // 模组启用/禁用
+  const toggleMod = async (m) => {
+    await window.nal.mods.setEnabled(instanceId, m.filename, !m.enabled)
+    setInstalledMods(await window.nal.mods.listInstalled(instanceId))
+  }
+
+  // 检查模组更新
+  const checkUpdates = async () => {
+    if (!instanceId) return
+    setCheckingUpdates(true)
+    try {
+      const r = await window.nal.content.checkModUpdates(instanceId)
+      setUpdates(r)
+      pushLog(`更新检查完成：${r.filter((x) => x.hasUpdate).length} 个模组有新版本`)
+    } catch (e) { setError(e.message) } finally { setCheckingUpdates(false) }
+  }
+  const doUpdateMod = async (m) => {
+    try {
+      await window.nal.content.updateMod(instanceId, m.modrinthProjectId, m.latestVersionId, m.filename)
+      pushLog(`已更新 ${m.name} 到 ${m.latestVersion}`)
+      setInstalledMods(await window.nal.mods.listInstalled(instanceId))
+      checkUpdates()
+    } catch (e) { setError(e.message) }
   }
 
   const loaderBadge = (l) => {
@@ -329,40 +372,67 @@ export default function ModsPage() {
         {/* 右侧：已装模组 + Fabric 安装 + 日志（sticky，滚动时保持可见） */}
         <div style={{ width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: 0, alignSelf: 'flex-start', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', paddingRight: 2 }}>
           <div className="card" style={{ padding: 14 }}>
-            <div style={{ fontWeight: 600, marginBottom: 10 }}>已装模组（{installedMods.length}）</div>
-            {installedMods.length === 0 && <div className="text-tertiary" style={{ fontSize: 12 }}>暂无模组</div>}
-            <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {installedMods.map((m) => (
-                <div key={m.filename} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.filename}>{m.filename}</span>
-                  <span className="text-tertiary">{fmtSize(m.size)}</span>
-                  <button className="btn btn-danger btn-sm" onClick={async () => {
-                    await window.nal.mods.deleteMod(instanceId, m.filename)
-                    setInstalledMods(await window.nal.mods.listInstalled(instanceId))
-                  }}>删</button>
-                </div>
-              ))}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ fontWeight: 600 }}>已装模组（{installedMods.length}）</div>
+              <button className="btn btn-ghost btn-sm" onClick={checkUpdates} disabled={checkingUpdates || !installedMods.length}>
+                {checkingUpdates ? '检查中...' : '检查更新'}
+              </button>
             </div>
+            {installedMods.length === 0 && <div className="text-tertiary" style={{ fontSize: 12 }}>暂无模组</div>}
+            <div style={{ maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {installedMods.map((m) => {
+                const up = updates?.find((u) => u.filename === m.filename)
+                return (
+                  <div key={m.filename} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                    <input type="checkbox" checked={m.enabled !== false} onChange={() => toggleMod(m)} title={m.enabled !== false ? '点击禁用' : '点击启用'} style={{ cursor: 'pointer', flexShrink: 0 }} />
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: m.enabled === false ? 0.5 : 1 }} title={m.filename}>{m.filename}</span>
+                    {up?.hasUpdate && (
+                      <button className="btn btn-primary btn-sm" style={{ padding: '0 6px' }} onClick={() => doUpdateMod(m)} title={`更新到 ${up.latestVersion}`}>↑</button>
+                    )}
+                    <span className="text-tertiary">{fmtSize(m.size)}</span>
+                    <button className="btn btn-danger btn-sm" onClick={async () => {
+                      await window.nal.mods.deleteMod(instanceId, m.filename)
+                      setInstalledMods(await window.nal.mods.listInstalled(instanceId))
+                    }}>删</button>
+                  </div>
+                )
+              })}
+            </div>
+            {updates && (
+              <div className="text-tertiary" style={{ fontSize: 11, marginTop: 8 }}>
+                {updates.filter((x) => x.hasUpdate).length > 0
+                  ? `${updates.filter((x) => x.hasUpdate).length} 个模组可更新（点 ↑ 升级）`
+                  : '所有模组已是最新'}
+              </div>
+            )}
           </div>
 
           <div className="card" style={{ padding: 14 }}>
-            <div style={{ fontWeight: 600, marginBottom: 10 }}>安装 Fabric（模组前置）</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <select className="select" style={{ flex: 1 }} value={fabricGame} onChange={(e) => { setFabricGame(e.target.value); loadFabric(e.target.value) }}>
+            <div style={{ fontWeight: 600, marginBottom: 10 }}>安装加载器（模组前置）</div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <select className="select" style={{ flex: 1 }} value={loaderType} onChange={(e) => { setLoaderType(e.target.value); setLoaderList([]) }}>
+                <option value="fabric">Fabric</option>
+                <option value="quilt">Quilt</option>
+                <option value="neoforge">NeoForge</option>
+              </select>
+              <select className="select" style={{ flex: 1 }} value={loaderGame} onChange={(e) => { setLoaderGame(e.target.value); setLoaderList([]) }}>
                 {GAME_VERSIONS.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
-              <button className="btn btn-ghost btn-sm" onClick={() => loadFabric(fabricGame)}>获取版本</button>
             </div>
-            <div style={{ marginTop: 8, maxHeight: 140, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {fabricList.slice(0, 8).map((f) => (
-                <div key={f.loader} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                  <span style={{ flex: 1 }}>{f.loader} {f.stable ? '' : '(beta)'}</span>
-                  <button className="btn btn-primary btn-sm" disabled={!!fabricInstalling} onClick={() => handleInstallFabric(f.loader)}>安装</button>
-                </div>
-              ))}
-              {fabricList.length === 0 && <div className="text-tertiary" style={{ fontSize: 12 }}>点击"获取版本"加载 Fabric loader 列表</div>}
+            <button className="btn btn-ghost btn-sm" style={{ width: '100%' }} onClick={() => loadLoaderList(loaderType, loaderGame)}>获取 {loaderType} 版本列表</button>
+            <div style={{ marginTop: 8, maxHeight: 160, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {loaderList.slice(0, 10).map((f) => {
+                const ver = f.loader || f.version
+                return (
+                  <div key={ver} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                    <span style={{ flex: 1 }}>{ver} {f.stable === false ? '(beta)' : ''}</span>
+                    <button className="btn btn-primary btn-sm" disabled={!!loaderInstalling} onClick={() => handleInstallLoader(ver)}>安装</button>
+                  </div>
+                )
+              })}
+              {loaderList.length === 0 && <div className="text-tertiary" style={{ fontSize: 12 }}>点击上方按钮加载 {loaderType} 版本列表</div>}
             </div>
-            {fabricInstalling && <div className="badge badge-warning" style={{ marginTop: 8 }}>{fabricInstalling}</div>}
+            {loaderInstalling && <div className="badge badge-warning" style={{ marginTop: 8 }}>{loaderInstalling}</div>}
           </div>
 
           {(logs.length > 0 || installing) && (

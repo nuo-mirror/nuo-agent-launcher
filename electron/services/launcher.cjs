@@ -14,9 +14,39 @@ const VERSIONS_DIR = process.env.NAL_VERSIONS_DIR
 const LIBRARIES_DIR = process.env.NAL_LIBRARIES_DIR
 const ASSETS_DIR = process.env.NAL_ASSETS_DIR
 const NATIVES_DIR = path.join(process.env.NAL_CACHE_DIR, 'natives')
+const PLAYTIME_FILE = path.join(process.env.NAL_APP_DIR || '', 'playtime.json')
 
 let _mainWindowGetter = null
 let _lastProcess = null
+
+// ============ 游戏时长统计 ============
+function readPlaytime() {
+  try {
+    if (fs.existsSync(PLAYTIME_FILE)) return JSON.parse(fs.readFileSync(PLAYTIME_FILE, 'utf8'))
+  } catch { }
+  return {}
+}
+function addPlaytime(versionId, seconds) {
+  try {
+    const data = readPlaytime()
+    data[versionId] = (data[versionId] || 0) + seconds
+    fs.writeFileSync(PLAYTIME_FILE, JSON.stringify(data, null, 2), 'utf8')
+  } catch { }
+}
+
+// 比较 Minecraft 版本号（如 1.20.1），返回 1/0/-1
+function compareMcVersions(a, b) {
+  const pa = String(a).split('.').map((n) => parseInt(n, 10) || 0)
+  const pb = String(b).split('.').map((n) => parseInt(n, 10) || 0)
+  const len = Math.max(pa.length, pb.length)
+  for (let i = 0; i < len; i++) {
+    const x = pa[i] || 0
+    const y = pb[i] || 0
+    if (x > y) return 1
+    if (x < y) return -1
+  }
+  return 0
+}
 
 // 解析版本 JSON，包含继承的 parent version
 async function resolveVersionJson(versionId) {
@@ -233,14 +263,23 @@ async function launch(versionId, accountId, options = {}) {
     }
 
     // features：决定版本 JSON 中 features 门控参数是否生效
+    // 快速进服：options.serverAddress（如 mc.example.com 或 host:port）
+    const gameVersion = versionJson.inheritsFrom || versionId
+    const serverAddr = (options.serverAddress || '').trim()
+    let quickPlayServer = ''
+    if (serverAddr && compareMcVersions(gameVersion, '1.20') >= 0) {
+      quickPlayServer = serverAddr
+      ctx.quickPlayMultiplayer = serverAddr
+    }
     const features = {
       has_custom_resolution: !!(options.resolutionWidth && options.resolutionHeight),
       is_demo_user: !!options.demo,
       has_quick_plays_support: !!options.quickPlayPath,
       is_quick_play_singleplayer: !!options.quickPlaySingleplayer,
-      is_quick_play_multiplayer: !!options.quickPlayMultiplayer,
+      is_quick_play_multiplayer: !!quickPlayServer,
       is_quick_play_realms: !!options.quickPlayRealms,
     }
+    if (quickPlayServer) pushLog(`启用快速进服: ${serverAddr}`)
 
     // 7. JVM 参数
     const cfg = getConfig()
@@ -272,6 +311,13 @@ async function launch(versionId, accountId, options = {}) {
         .split(/\s+/)
         .filter(Boolean)
     }
+    // < 1.20 版本无 quickPlay，用传统 --server/--port 进服
+    if (serverAddr && !quickPlayServer) {
+      const [host, port] = serverAddr.split(':')
+      gameArgs.push('--server', host)
+      gameArgs.push('--port', port || '25565')
+      pushLog(`启用快速进服(传统参数): ${host}:${port || '25565'}`)
+    }
 
     // 9. 主类
     const mainClass = versionJson.mainClass
@@ -293,6 +339,7 @@ async function launch(versionId, accountId, options = {}) {
     const child = spawn(javaExe, allArgs, { cwd, env, windowsHide: true, detached: false })
     _lastProcess = child
     pushState('running')
+    const startTs = Date.now()
 
     child.stdout.on('data', (data) => {
       const text = data.toString().trim()
@@ -303,9 +350,11 @@ async function launch(versionId, accountId, options = {}) {
       if (text) pushLog(text, { stream: 'stderr' })
     })
     child.on('close', (code) => {
+      const playedSec = Math.round((Date.now() - startTs) / 1000)
+      if (playedSec > 5) addPlaytime(versionId, playedSec)
       pushLog(`游戏进程退出，代码 ${code}`, { exitCode: code })
       pushState('exited', { exitCode: code })
-      logger.info('launcher', `游戏进程退出`, { code })
+      logger.info('launcher', `游戏进程退出`, { code, playedSec })
       _lastProcess = null
     })
     child.on('error', (e) => {
@@ -380,6 +429,7 @@ function register(ipcMain, getMainWindow) {
   _mainWindowGetter = getMainWindow
   ipcMain.handle('launcher:launch', (_e, id, accountId, opts) => launch(id, accountId, opts))
   ipcMain.handle('launcher:kill', killLast)
+  ipcMain.handle('launcher:playtime', () => readPlaytime())
 }
 
-module.exports = { register, launch, resolveVersionJson, getClasspath }
+module.exports = { register, launch, resolveVersionJson, getClasspath, readPlaytime }

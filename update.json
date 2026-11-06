@@ -1,18 +1,18 @@
 {
-  "version": "1.3.3",
-  "name": "NUO OS v1.3.3",
-  "notes": "NUO OS Minecraft Launcher v1.3.3",
-  "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/tag/v1.3.3",
+  "version": "1.4.0",
+  "name": "NUO OS v1.4.0",
+  "notes": "New: resource management page (resourcepacks/shaders/saves/screenshots), modpack import/export, NeoForge + Quilt install, mod enable/disable + update check, quick server join, playtime stats, log sharing via mclo.gs",
+  "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/tag/v1.4.0",
   "assets": [
     {
       "name": "nuo-agent-launcher-portable.exe",
-      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.3.3/nuo-agent-launcher-portable.exe",
-      "size": 63938233
+      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.0/nuo-agent-launcher-portable.exe",
+      "size": 63946406
     },
     {
       "name": "nuo-agent-launcher-setup.exe",
-      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.3.3/nuo-agent-launcher-setup.exe",
-      "size": 64167457
+      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.0/nuo-agent-launcher-setup.exe",
+      "size": 64175642
     }
   ]
 }

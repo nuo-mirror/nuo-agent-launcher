@@ -16,6 +16,9 @@ export default function HomePage() {
   const [logs, setLogs] = useState([])
   const [error, setError] = useState('')
   const [showLog, setShowLog] = useState(false)
+  const [serverAddress, setServerAddress] = useState('')
+  const [quickJoin, setQuickJoin] = useState(false)
+  const [playtime, setPlaytime] = useState({})
   const logBoxRef = useRef(null)
 
   // 启动诊断
@@ -38,6 +41,10 @@ export default function HomePage() {
       const activeId = config.activeAccountId
       const target = accs.find((a) => a.id === activeId) || accs[0]
       if (target) setSelectedAccount(target.id)
+      // 快速进服与游戏时长
+      setServerAddress(config.lastServerAddress || '')
+      setQuickJoin(!!config.quickJoinServer)
+      try { setPlaytime(await window.nal.launcher.playtime()) } catch { }
     } catch (e) {
       setError(e.message)
     } finally {
@@ -75,7 +82,9 @@ export default function HomePage() {
     setShowLog(true)
     setLaunchState('preparing')
     try {
-      const result = await window.nal.launcher.launch(selectedVersion, selectedAccount, {})
+      const opts = {}
+      if (quickJoin && serverAddress.trim()) opts.serverAddress = serverAddress.trim()
+      const result = await window.nal.launcher.launch(selectedVersion, selectedAccount, opts)
       if (!result.success) {
         setError(result.error)
         setLaunching(false)
@@ -194,7 +203,12 @@ export default function HomePage() {
                   <option key={v.id} value={v.id}>{v.id} ({v.type}) {!v.jarExists ? ' · 缺少 JAR' : ''}</option>
                 ))}
               </select>
-              <button className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => nav('/download')}>管理版本 / 下载新版本</button>
+              <div className="flex items-center justify-between" style={{ marginTop: 8 }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => nav('/download')}>管理版本 / 下载新版本</button>
+                {playtime[selectedVersion] > 0 && (
+                  <span className="text-xs text-tertiary">已玩 {formatPlaytime(playtime[selectedVersion])}</span>
+                )}
+              </div>
             </div>
             <div>
               <label className="field-label">账号</label>
@@ -205,6 +219,16 @@ export default function HomePage() {
                 ))}
               </select>
               <button className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => nav('/settings')}>管理账号</button>
+            </div>
+          </div>
+          {/* 快速进服 */}
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border-color)' }}>
+            <div className="flex items-center gap-3">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                <input type="checkbox" checked={quickJoin} onChange={(e) => { setQuickJoin(e.target.checked); window.nal.config.set('quickJoinServer', e.target.checked) }} style={{ cursor: 'pointer' }} />
+                启动后自动进服
+              </label>
+              <input className="input" style={{ flex: 1 }} placeholder="服务器地址，如 mc.example.com 或 mc.example.com:25565" value={serverAddress} onChange={(e) => setServerAddress(e.target.value)} onBlur={() => window.nal.config.set('lastServerAddress', serverAddress)} disabled={!quickJoin} />
             </div>
           </div>
         </div>
@@ -369,6 +393,14 @@ export default function HomePage() {
       `}</style>
     </div>
   )
+}
+
+function formatPlaytime(sec) {
+  if (!sec) return '0分钟'
+  const h = Math.floor(sec / 3600)
+  const m = Math.round((sec % 3600) / 60)
+  if (h > 0) return `${h}小时${m > 0 ? m + '分' : ''}`
+  return `${m}分钟`
 }
 
 function QuickCard({ title, desc, icon, onClick }) {

@@ -138,6 +138,7 @@ const services = [
   require('./services/bedrock.cjs'),
   require('./services/updater.cjs'),
   require('./services/diagnose.cjs'),
+  require('./services/content.cjs'),
 ]
 services.forEach((svc) => {
   if (svc && typeof svc.register === 'function') {

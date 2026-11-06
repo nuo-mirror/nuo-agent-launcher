@@ -492,6 +492,41 @@ async function listOptifine(gameVersion) {
   }
 }
 
+// Quilt 加载器列表（Quilt Meta 官方 API）
+async function listQuilt(gameVersion) {
+  try {
+    const url = 'https://meta.quiltmc.org/v3/versions/loader/' + gameVersion
+    const { data } = await httpGet(url)
+    const list = JSON.parse(data.toString())
+    return list.map((item) => ({
+      loader: item.loader.version,
+      separator: item.loader.separator,
+      build: item.loader.build,
+      maven: item.loader.maven,
+      stable: !/[-+](beta|pre|rc)/i.test(item.loader.version),
+    }))
+  } catch (e) {
+    logger.error('download', 'Quilt 列表获取失败', { error: e.message })
+    return []
+  }
+}
+
+// NeoForge 版本列表（从 BMCLAPI）
+async function listNeoForge(gameVersion) {
+  try {
+    const url = `https://bmclapi2.bangbang93.com/neoforge/list/${gameVersion}`
+    const { data } = await httpGet(url)
+    const list = JSON.parse(data.toString())
+    return (Array.isArray(list) ? list : []).map((item) => ({
+      version: item.version,
+      mcversion: item.mcversion,
+    }))
+  } catch (e) {
+    logger.error('download', 'NeoForge 列表获取失败', { error: e.message })
+    return []
+  }
+}
+
 async function deleteVersion(versionId) {
   const dir = path.join(VERSIONS_DIR, versionId)
   if (fs.existsSync(dir)) {
@@ -531,6 +566,8 @@ function register(ipcMain, getMainWindow) {
   ipcMain.handle('download:fabric', (_e, gv) => listFabric(gv))
   ipcMain.handle('download:forge', (_e, gv) => listForge(gv))
   ipcMain.handle('download:optifine', (_e, gv) => listOptifine(gv))
+  ipcMain.handle('download:quilt', (_e, gv) => listQuilt(gv))
+  ipcMain.handle('download:neoforge', (_e, gv) => listNeoForge(gv))
   ipcMain.handle('download:install', (_e, id, source) => installVersion(id, source))
   ipcMain.handle('download:cancel', (_e, taskId) => cancel(taskId))
   ipcMain.handle('download:installed', listInstalledVersions)
@@ -549,4 +586,4 @@ function register(ipcMain, getMainWindow) {
   })
 }
 
-module.exports = { register, installVersion, listVersions, listFabric, listForge, listOptifine, httpGet, downloadFile }
+module.exports = { register, installVersion, listVersions, listFabric, listForge, listOptifine, listQuilt, listNeoForge, httpGet, downloadFile }
