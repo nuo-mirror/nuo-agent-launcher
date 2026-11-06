@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld('nal', {
     cancel: (taskId) => invoke('download:cancel', taskId),
     listInstalled: () => invoke('download:installed'),
     deleteVersion: (versionId) => invoke('download:delete', versionId),
+    renameVersion: (oldId, newId) => invoke('download:rename', oldId, newId),
     onProgress: (cb) => onEvent('download:progress', cb),
     onLog: (cb) => onEvent('download:log', cb),
   },

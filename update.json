@@ -1,18 +1,18 @@
 {
-  "version": "1.4.0",
-  "name": "NUO OS v1.4.0",
-  "notes": "New: resource management page (resourcepacks/shaders/saves/screenshots), modpack import/export, NeoForge + Quilt install, mod enable/disable + update check, quick server join, playtime stats, log sharing via mclo.gs",
-  "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/tag/v1.4.0",
+  "version": "1.4.1",
+  "name": "NUO OS v1.4.1",
+  "notes": "New: install dialog on download (custom instance name + optional Fabric/Quilt/NeoForge loader install in one click), instance rename support",
+  "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/tag/v1.4.1",
   "assets": [
     {
       "name": "nuo-agent-launcher-portable.exe",
-      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.0/nuo-agent-launcher-portable.exe",
-      "size": 63946406
+      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.1/nuo-agent-launcher-portable.exe",
+      "size": 63947010
     },
     {
       "name": "nuo-agent-launcher-setup.exe",
-      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.0/nuo-agent-launcher-setup.exe",
-      "size": 64175642
+      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.1/nuo-agent-launcher-setup.exe",
+      "size": 64176234
     }
   ]
 }

@@ -537,6 +537,35 @@ async function deleteVersion(versionId) {
   return false
 }
 
+// 重命名实例：目录 + 版本 JSON 文件名 + JSON 内 id + 主 jar 文件名
+function renameVersion(oldId, newId) {
+  if (!newId || typeof newId !== 'string') return { success: false, error: '名称不能为空' }
+  newId = newId.trim()
+  if (!/^[\w.\- \u4e00-\u9fa5]+$/u.test(newId)) return { success: false, error: '名称含非法字符（不能用 \\ / : * ? " < > | 等）' }
+  if (newId === oldId) return { success: true, id: newId }
+  const oldDir = path.join(VERSIONS_DIR, oldId)
+  const newDir = path.join(VERSIONS_DIR, newId)
+  if (!fs.existsSync(oldDir)) return { success: false, error: '版本不存在' }
+  if (fs.existsSync(newDir)) return { success: false, error: '该名称已被占用' }
+  try {
+    const oldJson = path.join(oldDir, `${oldId}.json`)
+    if (!fs.existsSync(oldJson)) return { success: false, error: '版本 JSON 缺失，无法重命名' }
+    const data = JSON.parse(fs.readFileSync(oldJson, 'utf8'))
+    data.id = newId
+    const oldJar = path.join(oldDir, `${oldId}.jar`)
+    const hasJar = fs.existsSync(oldJar)
+    fs.renameSync(oldDir, newDir)
+    fs.writeFileSync(path.join(newDir, `${newId}.json`), JSON.stringify(data, null, 2), 'utf8')
+    fs.rmSync(path.join(newDir, `${oldId}.json`), { force: true })
+    if (hasJar) fs.renameSync(path.join(newDir, `${oldId}.jar`), path.join(newDir, `${newId}.jar`))
+    logger.info('download', `实例重命名: ${oldId} → ${newId}`)
+    return { success: true, id: newId }
+  } catch (e) {
+    logger.error('download', `重命名失败 ${oldId} → ${newId}`, { error: e.message })
+    return { success: false, error: e.message }
+  }
+}
+
 // 进度推送
 const _progressCallbacks = new Map()
 const _logCallbacks = new Map()
@@ -572,6 +601,7 @@ function register(ipcMain, getMainWindow) {
   ipcMain.handle('download:cancel', (_e, taskId) => cancel(taskId))
   ipcMain.handle('download:installed', listInstalledVersions)
   ipcMain.handle('download:delete', (_e, id) => deleteVersion(id))
+  ipcMain.handle('download:rename', (_e, oldId, newId) => renameVersion(oldId, newId))
   // 系统工具
   ipcMain.handle('sys:open', (_e, p) => {
     try { require('electron').shell.openPath(p); return true } catch { return false }
@@ -586,4 +616,4 @@ function register(ipcMain, getMainWindow) {
   })
 }
 
-module.exports = { register, installVersion, listVersions, listFabric, listForge, listOptifine, listQuilt, listNeoForge, httpGet, downloadFile }
+module.exports = { register, installVersion, listVersions, listFabric, listForge, listOptifine, listQuilt, listNeoForge, renameVersion, httpGet, downloadFile }

@@ -19,6 +19,7 @@ export default function DownloadPage() {
   const [filter, setFilter] = useState('release')
   const [search, setSearch] = useState('')
   const [installing, setInstalling] = useState(null) // { versionId, phase, percent }
+  const [installModal, setInstallModal] = useState(null) // { versionId, name, loader, loaderVersions, loaderVersion }
   const [jreList, setJreList] = useState([])
   const [systemJava, setSystemJava] = useState([])
   const [installLog, setInstallLog] = useState([])
@@ -67,17 +68,72 @@ export default function DownloadPage() {
     return true
   })
 
+  // 安装加载器（安装原版后串联执行），loaderVersion 为用户在弹窗里选定的版本
+  const installLoaderAfter = async (gameVersion, loaderType, loaderVersion) => {
+    try {
+      let r = null
+      if (loaderType === 'fabric') r = await window.nal.download.installFabric(gameVersion, loaderVersion)
+      else if (loaderType === 'quilt') r = await window.nal.download.installQuilt(gameVersion, loaderVersion)
+      else if (loaderType === 'neoforge') r = await window.nal.download.installNeoForge(gameVersion, loaderVersion)
+      if (r && r.success) {
+        setInstallLog((prev) => [...prev, { timestamp: new Date().toISOString(), message: `加载器安装完成: ${r.instanceId}`, extra: {} }])
+        return r.instanceId
+      }
+      setInstallLog((prev) => [...prev, { timestamp: new Date().toISOString(), message: `加载器安装失败: ${r?.error || '未知错误'}（原版 ${gameVersion} 已装好）`, extra: { error: true } }])
+    } catch (e) {
+      setInstallLog((prev) => [...prev, { timestamp: new Date().toISOString(), message: `加载器安装失败: ${e.message}（原版 ${gameVersion} 已装好）`, extra: { error: true } }])
+    }
+    return null
+  }
+
+  // 点击"下载"：弹出安装设置窗口
   const handleInstall = async (versionId) => {
+    setInstallModal({ versionId, name: versionId, loader: '', loaderVersions: [], loaderVersion: '', loadingVersions: false })
+  }
+
+  // 弹窗中选择加载器后加载其版本列表
+  const handlePickLoader = async (loaderType) => {
+    setInstallModal((m) => ({ ...m, loader: loaderType, loaderVersions: [], loaderVersion: '', loadingVersions: !!loaderType }))
+    if (!loaderType) return
+    try {
+      const gv = installModal.versionId
+      let list = []
+      let verKey = 'loader'
+      if (loaderType === 'fabric') list = await window.nal.download.listFabric(gv)
+      else if (loaderType === 'quilt') list = await window.nal.download.listQuilt(gv)
+      else if (loaderType === 'neoforge') { list = await window.nal.download.listNeoForge(gv); verKey = 'version' }
+      const stable = (list || []).filter((x) => x.stable !== false)
+      const ordered = stable.length ? stable : (list || [])
+      setInstallModal((m) => ({ ...m, loaderVersions: ordered, loaderVersion: ordered.length ? ordered[0][verKey] : '', loadingVersions: false }))
+    } catch {
+      setInstallModal((m) => ({ ...m, loaderVersions: [], loaderVersion: '', loadingVersions: false }))
+    }
+  }
+
+  // 弹窗确认：开始安装
+  const confirmInstall = async () => {
+    const { versionId, name, loader, loaderVersion } = installModal
+    setInstallModal(null)
     setInstalling({ versionId, phase: '准备开始', percent: 0 })
     setInstallLog([])
     setError('')
     try {
       const result = await window.nal.download.installVersion(versionId, config.downloadSource)
-      if (result.success) {
-        refresh()
-      } else {
-        setError(result.error || '安装失败')
+      if (!result.success) { setError(result.error || '安装失败'); return }
+      let finalId = versionId
+      if (loader && loaderVersion) {
+        setInstallLog((prev) => [...prev, { timestamp: new Date().toISOString(), message: `开始顺带安装 ${loader} ${loaderVersion}...`, extra: {} }])
+        const instId = await installLoaderAfter(versionId, loader, loaderVersion)
+        if (instId) finalId = instId
       }
+      // 自定义实例名
+      if (name && name.trim() && name.trim() !== finalId) {
+        const rn = await window.nal.download.renameVersion(finalId, name.trim())
+        if (!rn.success) {
+          setInstallLog((prev) => [...prev, { timestamp: new Date().toISOString(), message: `重命名失败: ${rn.error}`, extra: { error: true } }])
+        }
+      }
+      refresh()
     } catch (e) {
       setError(e.message)
     }
@@ -276,6 +332,44 @@ export default function DownloadPage() {
 
         {tab === 'bedrock' && <BedrockTab />}
       </div>
+
+      {/* 安装设置弹窗：自定义实例名 + 选装加载器 */}
+      {installModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setInstallModal(null)}>
+          <div className="card" style={{ width: 440, maxWidth: '92vw' }} onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg mb-4" style={{ fontWeight: 600 }}>安装 {installModal.versionId}</h2>
+            <div className="mb-3">
+              <label className="field-label">实例名称</label>
+              <input className="input" value={installModal.name} onChange={(e) => setInstallModal((m) => ({ ...m, name: e.target.value }))} placeholder="默认使用版本号命名" />
+              <div className="text-xs text-tertiary" style={{ marginTop: 4 }}>装好后显示在主页版本列表里的名字</div>
+            </div>
+            <div className="mb-4">
+              <label className="field-label">同时安装模组加载器</label>
+              <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+                {[{ v: '', l: '不安装' }, { v: 'fabric', l: 'Fabric' }, { v: 'quilt', l: 'Quilt' }, { v: 'neoforge', l: 'NeoForge' }].map((o) => (
+                  <button key={o.v} className={`btn btn-sm ${installModal.loader === o.v ? 'btn-primary' : 'btn-ghost'}`} onClick={() => handlePickLoader(o.v)}>{o.l}</button>
+                ))}
+              </div>
+              {installModal.loadingVersions && <div className="text-xs text-tertiary" style={{ marginTop: 6 }}>正在获取加载器版本...</div>}
+              {!!installModal.loader && !installModal.loadingVersions && (
+                <select className="select" style={{ marginTop: 8 }} value={installModal.loaderVersion} onChange={(e) => setInstallModal((m) => ({ ...m, loaderVersion: e.target.value }))}>
+                  {installModal.loaderVersions.length === 0 && <option value="">没有适配此版本的 {installModal.loader}</option>}
+                  {installModal.loaderVersions.slice(0, 20).map((x) => {
+                    const ver = x.loader || x.version
+                    return <option key={ver} value={ver}>{ver}{x.stable === false ? ' (beta)' : ''}</option>
+                  })}
+                </select>
+              )}
+            </div>
+            <div className="flex gap-2" style={{ justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setInstallModal(null)}>取消</button>
+              <button className="btn btn-primary" onClick={confirmInstall} disabled={installModal.loadingVersions || (!!installModal.loader && !installModal.loaderVersion)}>
+                开始安装
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .field-label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-secondary); font-weight: 500; }
