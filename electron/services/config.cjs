@@ -37,6 +37,9 @@ const DEFAULT_CONFIG = {
   // 备用更新源：可公开访问的 JSON 清单地址（留空则走 GitHub API 官方源）
   // 适用场景：GitHub 不可达时，用自建清单 + 其它下载地址替代
   updateFeedUrl: 'https://raw.githubusercontent.com/nuo-mirror/nuo-agent-launcher/main/update.json',
+  // 个性化：自定义背景图片（本地文件路径，'' = 无）、主题强调色（十六进制，'' = 默认）
+  bgImage: '',
+  accentColor: '',
 }
 
 function loadConfig() {
@@ -87,6 +90,57 @@ function register(ipcMain) {
     _config = { ...getConfig(), ...data }
     saveConfig(_config)
     return _config
+  })
+  // 导入背景图片：弹文件选择框 → 复制到配置目录 custom/bg.<ext>
+  ipcMain.handle('config:import-bg-image', async () => {
+    try {
+      const { dialog } = require('electron')
+      const r = await dialog.showOpenDialog({
+        title: '选择背景图片',
+        filters: [{ name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'] }],
+        properties: ['openFile'],
+      })
+      if (r.canceled || !r.filePaths[0]) return { success: false, canceled: true }
+      const src = r.filePaths[0]
+      const ext = path.extname(src).toLowerCase() || '.png'
+      const dir = path.join(path.dirname(CONFIG_FILE), 'custom')
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+      for (const f of fs.readdirSync(dir)) {
+        if (f.startsWith('bg.')) { try { fs.rmSync(path.join(dir, f), { force: true }) } catch { } }
+      }
+      const dest = path.join(dir, 'bg' + ext)
+      fs.copyFileSync(src, dest)
+      const cfg = getConfig()
+      cfg.bgImage = dest
+      _config = cfg
+      saveConfig(cfg)
+      return { success: true, path: dest }
+    } catch (e) {
+      return { success: false, error: e.message }
+    }
+  })
+  // 读取背景图片（data URL，供渲染进程显示，避免 file:// 受限）
+  ipcMain.handle('config:get-bg-image', () => {
+    try {
+      const p = getConfig().bgImage
+      if (!p || !fs.existsSync(p)) return null
+      let ext = path.extname(p).slice(1).toLowerCase()
+      if (ext === 'jpg') ext = 'jpeg'
+      if (!ext) ext = 'png'
+      const b64 = fs.readFileSync(p).toString('base64')
+      return `data:image/${ext};base64,${b64}`
+    } catch {
+      return null
+    }
+  })
+  ipcMain.handle('config:clear-bg-image', () => {
+    const p = getConfig().bgImage
+    if (p && fs.existsSync(p)) { try { fs.rmSync(p, { force: true }) } catch { } }
+    const cfg = getConfig()
+    cfg.bgImage = ''
+    _config = cfg
+    saveConfig(cfg)
+    return true
   })
 }
 

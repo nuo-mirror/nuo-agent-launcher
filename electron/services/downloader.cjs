@@ -73,7 +73,8 @@ function httpGet(url, opts = {}) {
 }
 
 // 下载到文件，带进度回调
-function downloadFile(url, destPath, opts = {}) {
+// 单次下载尝试（含停滞看门狗：stallTimeout 毫秒内没收到新数据就判定连接假死）
+function downloadFileOnce(url, destPath, opts = {}) {
   return new Promise((resolve, reject) => {
     const lib = url.startsWith('https') ? https : http
     const req = lib.get(url, {
@@ -84,7 +85,7 @@ function downloadFile(url, destPath, opts = {}) {
       timeout: opts.timeout || 60000,
     }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return resolve(downloadFile(res.headers.location, destPath, opts))
+        return resolve(downloadFileOnce(res.headers.location, destPath, opts))
       }
       if (res.statusCode !== 200) {
         const err = new Error(`HTTP ${res.statusCode} for ${url}`)
@@ -97,7 +98,19 @@ function downloadFile(url, destPath, opts = {}) {
       const file = fs.createWriteStream(destPath + '.part')
       const total = parseInt(res.headers['content-length'] || '0', 10)
       let received = 0
+      let lastReceived = 0
       const startTime = Date.now()
+      // 停滞看门狗：socket timeout 对「连接建立后服务器不吐数据」的假死无效，必须主动检测
+      const stallMs = opts.stallTimeout || 20000
+      const watchdog = setInterval(() => {
+        if (received === lastReceived) {
+          clearInterval(watchdog)
+          req.destroy(new Error('下载停滞超时: ' + url))
+        } else {
+          lastReceived = received
+        }
+      }, stallMs)
+      const cleanup = () => clearInterval(watchdog)
       res.on('data', (chunk) => {
         received += chunk.length
         file.write(chunk)
@@ -106,16 +119,35 @@ function downloadFile(url, destPath, opts = {}) {
         }
       })
       res.on('end', () => {
+        cleanup()
         file.end(() => {
           fs.renameSync(destPath + '.part', destPath)
           resolve({ received, total })
         })
       })
-      res.on('error', (e) => { try { fs.unlinkSync(destPath + '.part') } catch {} reject(e) })
+      res.on('error', (e) => { cleanup(); try { fs.unlinkSync(destPath + '.part') } catch {} reject(e) })
     })
     req.on('error', reject)
     req.on('timeout', () => req.destroy(new Error('Download timeout: ' + url)))
   })
+}
+
+// 带重试 + 备用镜像回退的下载：
+// 第 1 次用原始 URL，后续重试依次切换 fallbackUrls（如 BMCLAPI），解决 Mojang 官方源在部分网络下假死的问题
+async function downloadFile(url, destPath, opts = {}) {
+  const maxRetries = opts.retries == null ? 2 : opts.retries
+  const urls = [url, ...(opts.fallbackUrls || [])]
+  let lastErr = null
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const u = urls[Math.min(attempt, urls.length - 1)]
+    try {
+      return await downloadFileOnce(u, destPath, opts)
+    } catch (e) {
+      lastErr = e
+      logger.warn('download', `下载失败（第 ${attempt + 1}/${maxRetries + 1} 次）: ${e.message}`, { url: u, dest: path.basename(destPath) })
+    }
+  }
+  throw lastErr
 }
 
 // SHA1 校验
@@ -217,7 +249,13 @@ async function installVersion(versionId, source = null) {
     if (clientUrl && !fs.existsSync(clientPath)) {
       log('下载客户端 JAR', { url: clientUrl })
       const clientUrlBMCL = remapToBMCL(clientUrl, src.clientBase)
+      // 官方源假死时自动回退 BMCLAPI 客户端镜像（/version/<id>/client）
+      const fallbacks = []
+      if (!/bangbang93\.com|mcbbs\.net/.test(clientUrlBMCL)) {
+        fallbacks.push(`https://bmclapi2.bangbang93.com/version/${versionId}/client`)
+      }
       await downloadFile(clientUrlBMCL, clientPath, {
+        fallbackUrls: fallbacks,
         onProgress: (p) => pushProgress(taskId, { phase: '下载客户端', percent: 5 + (p.received / p.total) * 5, ...p }),
       })
       if (clientSha1 && sha1File(clientPath) !== clientSha1) {
@@ -270,7 +308,7 @@ async function downloadLibraries(libraries, src, taskId, startPercent, endPercen
   pushLog(taskId, `解析库文件，共 ${validLibs.length} 个需要检查`)
   const total = validLibs.length
   let completed = 0
-  const concurrency = 8
+  const concurrency = 16
   let idx = 0
   const errors = []
 
@@ -399,7 +437,7 @@ async function downloadAssets(indexId, assetIndexMeta, src, taskId, startPercent
   const total = keys.length
   pushLog(taskId, `下载资源文件，共 ${total} 个`)
   let completed = 0
-  const concurrency = 16
+  const concurrency = 32
   let idx = 0
   async function worker() {
     while (idx < keys.length) {

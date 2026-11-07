@@ -16,6 +16,7 @@ const SeedsPage = lazy(() => import('./pages/Seeds.jsx'))
 import { applyCustomColors } from './utils/themeColors.js'
 import { useConfigStore } from './stores/config.js'
 import { useUpdaterStore, isDownloading } from './stores/updater.js'
+import { loadPersonalization } from './utils/personalize.js'
 import Icon from './components/Icon.jsx'
 import navMapTex from './assets/mc/navmap.png'
 import pkg from '../package.json'
@@ -98,6 +99,34 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
+
+  // 个性化：自定义背景图 + 主题强调色（Settings 修改后通过事件触发重载）
+  const [bgImage, setBgImage] = useState(null)
+  useEffect(() => {
+    let alive = true
+    const reload = async () => {
+      const bg = await loadPersonalization()
+      if (alive) setBgImage(bg)
+    }
+    reload()
+    window.addEventListener('nal-personalize', reload)
+    return () => { alive = false; window.removeEventListener('nal-personalize', reload) }
+  }, [])
+  useEffect(() => {
+    const body = document.body
+    if (bgImage) {
+      const overlay = theme === 'light' ? 'rgba(244, 246, 250, 0.88)' : 'rgba(13, 17, 23, 0.86)'
+      body.style.backgroundImage = `linear-gradient(${overlay}, ${overlay}), url("${bgImage}")`
+      body.style.backgroundSize = 'cover'
+      body.style.backgroundPosition = 'center'
+      body.style.backgroundAttachment = 'fixed'
+    } else {
+      body.style.backgroundImage = ''
+      body.style.backgroundSize = ''
+      body.style.backgroundPosition = ''
+      body.style.backgroundAttachment = ''
+    }
+  }, [bgImage, theme])
 
   // 监听主进程启动时静默检查到的新版本 + 自更新下载进度
   useEffect(() => {

@@ -27,6 +27,9 @@ contextBridge.exposeInMainWorld('nal', {
     set: (key, value) => invoke('config:set', key, value),
     getAll: () => invoke('config:getAll'),
     setAll: (data) => invoke('config:setAll', data),
+    importBgImage: () => invoke('config:import-bg-image'),
+    getBgImage: () => invoke('config:get-bg-image'),
+    clearBgImage: () => invoke('config:clear-bg-image'),
   },
   // 日志
   logs: {
@@ -49,6 +52,7 @@ contextBridge.exposeInMainWorld('nal', {
     installFabric: (gameVersion, loaderVersion) => invoke('download:install-fabric', gameVersion, loaderVersion),
     installQuilt: (gameVersion, loaderVersion) => invoke('download:install-quilt', gameVersion, loaderVersion),
     installNeoForge: (gameVersion, neoforgeVersion) => invoke('download:install-neoforge', gameVersion, neoforgeVersion),
+    installForge: (gameVersion, forgeVersion) => invoke('download:install-forge', gameVersion, forgeVersion),
     cancel: (taskId) => invoke('download:cancel', taskId),
     listInstalled: () => invoke('download:installed'),
     deleteVersion: (versionId) => invoke('download:delete', versionId),

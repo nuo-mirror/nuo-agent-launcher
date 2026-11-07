@@ -1,6 +1,7 @@
 // 设置页面：游戏路径、Java 内存、下载源、主题、AI、账号管理
 import { useEffect, useState } from 'react'
 import { useConfigStore } from '../stores/config.js'
+import { notifyPersonalizeChanged } from '../utils/personalize.js'
 import Icon from '../components/Icon.jsx'
 
 const SECTIONS = [
@@ -87,6 +88,56 @@ function GeneralSection({ config, update }) {
           <option value="dark">深色</option>
           <option value="light">浅色</option>
         </select>
+      </Field>
+
+      <Field label="主题强调色" hint="自定义按钮、进度条、选中态的颜色，实时生效">
+        <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+          {['#4f9eff', '#7c4dff', '#22c55e', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6', '#f97316'].map((c) => (
+            <button
+              key={c}
+              title={c}
+              onClick={() => { update('accentColor', c); notifyPersonalizeChanged() }}
+              style={{
+                width: 26, height: 26, borderRadius: '50%', background: c, cursor: 'pointer',
+                border: (config.accentColor || '').toLowerCase() === c ? '2px solid #fff' : '2px solid transparent',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+              }}
+            />
+          ))}
+          <input
+            type="color"
+            title="自定义颜色"
+            value={config.accentColor || '#4f9eff'}
+            onChange={(e) => { update('accentColor', e.target.value); notifyPersonalizeChanged() }}
+            style={{ width: 30, height: 30, padding: 0, border: 'none', background: 'none', cursor: 'pointer' }}
+          />
+          {config.accentColor && (
+            <button className="btn btn-ghost btn-sm" onClick={() => { update('accentColor', ''); notifyPersonalizeChanged() }}>恢复默认</button>
+          )}
+        </div>
+      </Field>
+
+      <Field label="背景图片" hint="导入一张图片作为启动器背景（自动加暗色蒙版保证可读性）">
+        <div className="flex items-center gap-2">
+          <button
+            className="btn btn-ghost"
+            onClick={async () => {
+              const r = await window.nal.config.importBgImage()
+              if (r?.success) { update('bgImage', r.path); notifyPersonalizeChanged() }
+              else if (r?.error) alert(`导入失败：${r.error}`)
+            }}
+          >
+            {config.bgImage ? '更换图片' : '导入图片'}
+          </button>
+          {config.bgImage && (
+            <button
+              className="btn btn-ghost"
+              onClick={async () => { await window.nal.config.clearBgImage(); update('bgImage', ''); notifyPersonalizeChanged() }}
+            >
+              清除背景
+            </button>
+          )}
+        </div>
       </Field>
 
       <Field label="下载源">

@@ -75,6 +75,7 @@ export default function DownloadPage() {
       if (loaderType === 'fabric') r = await window.nal.download.installFabric(gameVersion, loaderVersion)
       else if (loaderType === 'quilt') r = await window.nal.download.installQuilt(gameVersion, loaderVersion)
       else if (loaderType === 'neoforge') r = await window.nal.download.installNeoForge(gameVersion, loaderVersion)
+      else if (loaderType === 'forge') r = await window.nal.download.installForge(gameVersion, loaderVersion)
       if (r && r.success) {
         setInstallLog((prev) => [...prev, { timestamp: new Date().toISOString(), message: `加载器安装完成: ${r.instanceId}`, extra: {} }])
         return r.instanceId
@@ -102,6 +103,7 @@ export default function DownloadPage() {
       if (loaderType === 'fabric') list = await window.nal.download.listFabric(gv)
       else if (loaderType === 'quilt') list = await window.nal.download.listQuilt(gv)
       else if (loaderType === 'neoforge') { list = await window.nal.download.listNeoForge(gv); verKey = 'version' }
+      else if (loaderType === 'forge') { list = await window.nal.download.listForge(gv); verKey = 'version' }
       const stable = (list || []).filter((x) => x.stable !== false)
       const ordered = stable.length ? stable : (list || [])
       setInstallModal((m) => ({ ...m, loaderVersions: ordered, loaderVersion: ordered.length ? ordered[0][verKey] : '', loadingVersions: false }))
@@ -346,7 +348,7 @@ export default function DownloadPage() {
             <div className="mb-4">
               <label className="field-label">同时安装模组加载器</label>
               <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
-                {[{ v: '', l: '不安装' }, { v: 'fabric', l: 'Fabric' }, { v: 'quilt', l: 'Quilt' }, { v: 'neoforge', l: 'NeoForge' }].map((o) => (
+                {[{ v: '', l: '不安装' }, { v: 'fabric', l: 'Fabric' }, { v: 'forge', l: 'Forge' }, { v: 'quilt', l: 'Quilt' }, { v: 'neoforge', l: 'NeoForge' }].map((o) => (
                   <button key={o.v} className={`btn btn-sm ${installModal.loader === o.v ? 'btn-primary' : 'btn-ghost'}`} onClick={() => handlePickLoader(o.v)}>{o.l}</button>
                 ))}
               </div>
@@ -479,7 +481,7 @@ function BedrockTab() {
   const openDir = async () => {
     try {
       const dir = await window.nal.bedrock.openDir()
-      if (dir && window.nal.sys?.open) window.nal.sys.open(dir)
+      if (dir && window.nal.system?.openPath) window.nal.system.openPath(dir)
     } catch {}
   }
 

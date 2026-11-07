@@ -1,18 +1,18 @@
-{
-  "version": "1.4.1",
-  "name": "NUO OS v1.4.1",
-  "notes": "New: install dialog on download (custom instance name + optional Fabric/Quilt/NeoForge loader install in one click), instance rename support",
-  "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/tag/v1.4.1",
-  "assets": [
-    {
-      "name": "nuo-agent-launcher-portable.exe",
-      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.1/nuo-agent-launcher-portable.exe",
-      "size": 63947010
-    },
-    {
-      "name": "nuo-agent-launcher-setup.exe",
-      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.1/nuo-agent-launcher-setup.exe",
-      "size": 64176234
-    }
-  ]
+﻿{
+    "version":  "1.4.2",
+    "name":  "NUO OS v1.4.2",
+    "notes":  "New: custom background image + accent color, one-click Forge install, faster parallel downloads. Fix: vanilla client.jar download hang (stall watchdog + BMCLAPI fallback), personalization not applying, bedrock open-folder button",
+    "url":  "https://github.com/nuo-mirror/nuo-agent-launcher/releases/tag/v1.4.2",
+    "assets":  [
+                   {
+                       "name":  "nuo-agent-launcher-portable.exe",
+                       "url":  "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.2/nuo-agent-launcher-portable.exe",
+                       "size":  63949837
+                   },
+                   {
+                       "name":  "nuo-agent-launcher-setup.exe",
+                       "url":  "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.2/nuo-agent-launcher-setup.exe",
+                       "size":  64179063
+                   }
+               ]
 }

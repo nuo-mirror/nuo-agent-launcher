@@ -429,6 +429,66 @@ async function installNeoForge(gameVersion, neoforgeVersion) {
   }
 }
 
+// Forge 一键安装（新版 Forge 官方安装器 --installClient，流程同 NeoForge）
+// forgeVersion 形如 "47.2.0"，完整版本号 = <mc版本>-<forge版本>
+async function installForge(gameVersion, forgeVersion) {
+  const fullVersion = `${gameVersion}-${forgeVersion}`
+  const taskId = `forge-${gameVersion}-${forgeVersion}-${Date.now()}`
+  const log = (msg, extra) => pushLog(msg, extra)
+  const progress = (phase, percent) => pushProgress(taskId, { phase, percent })
+  const staging = path.join(CACHE_DIR, `forge-install-${Date.now()}`)
+  try {
+    log(`开始安装 Forge: MC ${gameVersion} + Forge ${forgeVersion}`)
+    const vanillaJson = path.join(VERSIONS_DIR, gameVersion, `${gameVersion}.json`)
+    if (!fs.existsSync(vanillaJson)) {
+      progress('安装原版依赖', 2)
+      log(`原版 ${gameVersion} 未安装，先安装...`)
+      const result = await installVersion(gameVersion)
+      if (!result.success) throw new Error(`原版 ${gameVersion} 安装失败: ${result.error}`)
+    }
+    progress('准备 Java 运行安装器', 8)
+    const { ensureJavaForVersion } = require('./java.cjs')
+    const javaRes = await ensureJavaForVersion(gameVersion)
+    const javaExe = javaRes.exePath
+    progress('下载 Forge 安装器', 12)
+    fs.mkdirSync(staging, { recursive: true })
+    const installerPath = path.join(staging, 'forge-installer.jar')
+    const candidates = [
+      `https://bmclapi2.bangbang93.com/maven/net/minecraftforge/forge/${fullVersion}/forge-${fullVersion}-installer.jar`,
+      `https://maven.minecraftforge.net/net/minecraftforge/forge/${fullVersion}/forge-${fullVersion}-installer.jar`,
+    ]
+    let got = false; let lastErr = null
+    for (const url of candidates) {
+      try { log(`下载安装器: ${url}`); await downloadFile(url, installerPath, { timeout: 180000 }); got = true; break }
+      catch (e) { lastErr = e }
+    }
+    if (!got) throw new Error(`Forge 安装器下载失败: ${lastErr && lastErr.message}`)
+    progress('运行 Forge 安装器（可能需要几分钟）', 20)
+    await runNeoForgeInstaller(javaExe, installerPath, staging, log)
+    const versionsSub = path.join(staging, 'versions')
+    if (!fs.existsSync(versionsSub)) throw new Error('安装器未生成 versions 目录')
+    const produced = fs.readdirSync(versionsSub).find((d) => fs.existsSync(path.join(versionsSub, d, `${d}.json`)))
+    if (!produced) throw new Error('未找到安装器生成的版本 JSON')
+    const targetDir = path.join(VERSIONS_DIR, produced)
+    fs.mkdirSync(targetDir, { recursive: true })
+    fs.copyFileSync(path.join(versionsSub, produced, `${produced}.json`), path.join(targetDir, `${produced}.json`))
+    progress('合并依赖库', 85)
+    const stagingLibs = path.join(staging, 'libraries')
+    let copied = 0
+    if (fs.existsSync(stagingLibs)) copied = copyDirMerge(stagingLibs, LIBRARIES_DIR)
+    progress('完成', 100)
+    log(`Forge 实例 ${produced} 安装完成（合并 ${copied} 个库文件）`)
+    return { success: true, instanceId: produced }
+  } catch (e) {
+    logger.error('download', 'Forge 安装失败', { error: e.message })
+    pushLog(`Forge 安装失败: ${e.message}`, { error: true })
+    pushProgress(taskId, { phase: '安装失败', percent: 100, error: e.message })
+    return { success: false, error: e.message }
+  } finally {
+    try { fs.rmSync(staging, { recursive: true, force: true }) } catch { }
+  }
+}
+
 function register(ipcMain, getMainWindow) {
   _mainWindowGetter = getMainWindow
   ipcMain.handle('mods:search', (_e, opts) => searchMods(opts || {}))
@@ -440,6 +500,7 @@ function register(ipcMain, getMainWindow) {
   ipcMain.handle('download:install-fabric', (_e, gv, lv) => installFabric(gv, lv))
   ipcMain.handle('download:install-quilt', (_e, gv, lv) => installQuilt(gv, lv))
   ipcMain.handle('download:install-neoforge', (_e, gv, nv) => installNeoForge(gv, nv))
+  ipcMain.handle('download:install-forge', (_e, gv, fv) => installForge(gv, fv))
 }
 
-module.exports = { register, searchMods, getModVersions, installMod, installFabric, installQuilt, installNeoForge, listInstalledMods, deleteMod, setModEnabled, detectInstanceInfo }
+module.exports = { register, searchMods, getModVersions, installMod, installFabric, installQuilt, installNeoForge, installForge, listInstalledMods, deleteMod, setModEnabled, detectInstanceInfo }
