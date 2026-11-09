@@ -1,18 +1,18 @@
-﻿{
-    "version":  "1.4.2",
-    "name":  "NUO OS v1.4.2",
-    "notes":  "New: custom background image + accent color, one-click Forge install, faster parallel downloads. Fix: vanilla client.jar download hang (stall watchdog + BMCLAPI fallback), personalization not applying, bedrock open-folder button",
-    "url":  "https://github.com/nuo-mirror/nuo-agent-launcher/releases/tag/v1.4.2",
-    "assets":  [
-                   {
-                       "name":  "nuo-agent-launcher-portable.exe",
-                       "url":  "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.2/nuo-agent-launcher-portable.exe",
-                       "size":  63949837
-                   },
-                   {
-                       "name":  "nuo-agent-launcher-setup.exe",
-                       "url":  "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.2/nuo-agent-launcher-setup.exe",
-                       "size":  64179063
-                   }
-               ]
+{
+  "version": "1.4.4",
+  "name": "NUO OS v1.4.4",
+  "notes": "Polish: home page visual details and experience improvements. Fix: auto-update download now falls back to direct IPs when GitHub edge nodes fail.",
+  "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/tag/v1.4.4",
+  "assets": [
+    {
+      "name": "nuo-agent-launcher-portable.exe",
+      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.4/nuo-agent-launcher-portable.exe",
+      "size": 63951794
+    },
+    {
+      "name": "nuo-agent-launcher-setup.exe",
+      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.4/nuo-agent-launcher-setup.exe",
+      "size": 64181028
+    }
+  ]
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react'
+import { useEffect, useState, useRef, lazy, Suspense } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import HomePage from './pages/Home.jsx'
 import DownloadPage from './pages/Download.jsx'
@@ -17,6 +17,7 @@ import { applyCustomColors } from './utils/themeColors.js'
 import { useConfigStore } from './stores/config.js'
 import { useUpdaterStore, isDownloading } from './stores/updater.js'
 import { loadPersonalization } from './utils/personalize.js'
+import { makeSequenceDetector, KONAMI, HEROBRINE } from './utils/easterEggs.js'
 import Icon from './components/Icon.jsx'
 import navMapTex from './assets/mc/navmap.png'
 import pkg from '../package.json'
@@ -77,6 +78,50 @@ export default function App() {
   const navItems = devMode
     ? [...BASE_NAV_ITEMS, ...DEV_NAV_ITEMS]
     : BASE_NAV_ITEMS
+
+  // 彩蛋 toast
+  const [toast, setToast] = useState(null)
+  const toastTimer = useRef(null)
+  const showToast = (msg) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast(msg)
+    toastTimer.current = setTimeout(() => setToast(null), 4200)
+  }
+  const logoClicks = useRef({ count: 0, time: 0 })
+  const onLogoClick = () => {
+    const now = Date.now()
+    const s = logoClicks.current
+    if (now - s.time > 3000) s.count = 0
+    s.time = now
+    s.count++
+    if (s.count === 7) {
+      s.count = 0
+      showToast('你发现了隐藏彩蛋！其实并没有奖励，但你找到了。')
+    }
+  }
+  // 按键彩蛋：科乐美秘籍 = 派对模式；输入 herobrine = 经典梗
+  useEffect(() => {
+    const konami = makeSequenceDetector(KONAMI, () => {
+      showToast('派对模式启动！8 秒后恢复原样……')
+      let deg = 0
+      const t = setInterval(() => {
+        deg = (deg + 12) % 360
+        document.body.style.filter = `hue-rotate(${deg}deg)`
+      }, 80)
+      setTimeout(() => { clearInterval(t); document.body.style.filter = '' }, 8000)
+    })
+    const hero = makeSequenceDetector(HEROBRINE, () => {
+      showToast('Herobrine has been removed. ……大概吧。')
+    })
+    const onKey = (e) => {
+      if (e.target && /^(input|textarea|select)$/i.test(e.target.tagName)) return
+      const k = (e.key || '').toLowerCase()
+      konami(k)
+      hero(k)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   useEffect(() => {
     (async () => {
@@ -173,7 +218,7 @@ export default function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="sidebar-header">
-          <div className="logo">
+          <div className="logo" onClick={onLogoClick} style={{ cursor: 'default', userSelect: 'none' }}>
             <div className="logo-mark">N</div>
             <div className="logo-text">
               <div className="logo-title">nuo agent</div>
@@ -201,6 +246,18 @@ export default function App() {
           <div className="version-badge">v{APP_VERSION}</div>
         </div>
       </aside>
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 28, right: 28, zIndex: 9999,
+          background: 'var(--bg-secondary, #161b22)', color: 'var(--text-primary, #e6edf3)',
+          border: '1px solid var(--accent, #4f9eff)', borderRadius: 10,
+          padding: '12px 18px', fontSize: 14, boxShadow: '0 8px 30px rgba(0,0,0,0.45)',
+          animation: 'nal-toast-in 0.25s ease-out',
+        }}>
+          {toast}
+          <style>{'@keyframes nal-toast-in { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }'}</style>
+        </div>
+      )}
       <main className="main-content">
         {updateInfo && (
           <div className="update-banner">

@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useConfigStore } from '../stores/config.js'
 import Icon from '../components/Icon.jsx'
+import Splash from '../components/Splash.jsx'
 
 export default function HomePage() {
   const nav = useNavigate()
@@ -148,8 +149,9 @@ export default function HomePage() {
         {/* Hero 区 */}
         <div className="hero">
           <div className="hero-bg" />
-          <div className="hero-content">
+          <div className="hero-content" style={{ position: 'relative' }}>
             <h1 className="hero-title">NUO OS</h1>
+            <Splash />
             <p className="hero-subtitle">一键启动你的 Minecraft 世界 · 集成 Java 自动下载 · AI 助手 · 联机</p>
             <button className="btn btn-primary btn-lg launch-btn" onClick={handleLaunch} disabled={launching || loading}>
               {launching ? (

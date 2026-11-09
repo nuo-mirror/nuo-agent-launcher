@@ -16,6 +16,14 @@ const { getConfig } = require('./config.cjs')
 const REPO = 'nuo-mirror/nuo-agent-launcher'
 const API_HOST = 'api.github.com'
 const FALLBACK_IPS = ['140.82.112.6', '140.82.113.6', '20.205.243.168']
+// 下载链路的直连 IP 回退：github.com 不同边缘节点的可用性差异很大，
+// 部分节点会稳定返回 504；release 资产由 CDN 域名提供，同样需要 IP 回退。
+const HOST_IPS = {
+  'github.com': ['140.82.113.3', '140.82.112.3', '140.82.114.3', '20.205.243.166'],
+  'raw.githubusercontent.com': ['185.199.108.133', '185.199.109.133', '185.199.110.133', '185.199.111.133'],
+  'objects.githubusercontent.com': ['185.199.108.133', '185.199.109.133', '185.199.110.133', '185.199.111.133'],
+  'release-assets.githubusercontent.com': ['185.199.108.133', '185.199.109.133', '185.199.110.133', '185.199.111.133'],
+}
 const RELEASES_URL = `https://github.com/${REPO}/releases`
 const UA = 'nuo-agent-launcher-updater'
 
@@ -133,16 +141,18 @@ async function apiGet(reqPath) {
 }
 
 // 通用 HTTPS JSON 获取（用于备用更新源清单，任意域名，自动跟随重定向）
-function getJsonFromUrl(url, maxRedirects = 4) {
+// forceIp：指定直连 IP，用于规避部分网络下 raw.githubusercontent.com 的 DNS 污染
+function getJsonFromUrl(url, maxRedirects = 4, forceIp = null) {
   return new Promise((resolve, reject) => {
     let u
     try { u = new URL(url) } catch (e) { reject(e); return }
     if (u.protocol !== 'https:') { reject(new Error('备用更新源必须是 https 地址')); return }
     const req = https.get({
-      hostname: u.hostname,
+      hostname: forceIp || u.hostname,
       port: u.port || 443,
       path: u.pathname + u.search,
-      headers: { 'User-Agent': UA, Accept: 'application/json', Connection: 'close' },
+      servername: forceIp ? u.hostname : undefined,
+      headers: { 'User-Agent': UA, Accept: 'application/json', Connection: 'close', Host: u.hostname },
       timeout: 8000,
     }, (res) => {
       if ([301, 302, 307, 308].includes(res.statusCode) && res.headers.location && maxRedirects > 0) {
@@ -154,12 +164,30 @@ function getJsonFromUrl(url, maxRedirects = 4) {
       res.on('data', (c) => { data += c; if (data.length > 4 * 1024 * 1024) req.destroy() })
       res.on('end', () => {
         if (res.statusCode >= 400) { reject(new Error(`HTTP ${res.statusCode}`)); return }
-        try { resolve(JSON.parse(data)) } catch (e) { reject(new Error('备用更新源返回的不是有效 JSON')) }
+        try { resolve(JSON.parse(data.replace(/^\uFEFF/, ''))) } catch (e) { reject(new Error('备用更新源返回的不是有效 JSON')) }
       })
     })
     req.on('timeout', () => req.destroy(new Error('请求超时')))
     req.on('error', reject)
   })
+}
+
+// 带直连 IP 回退的 JSON 获取：默认 DNS 失败后依次尝试该域名的可用 IP
+async function getJsonWithFallback(url) {
+  try {
+    return await getJsonFromUrl(url)
+  } catch (e) {
+    let lastErr = e
+    let ips = []
+    try { ips = HOST_IPS[new URL(url).hostname] || [] } catch {}
+    for (const ip of ips) {
+      try {
+        logger.info('updater', `默认线路失败，通过 IP ${ip} 读取清单`, { error: lastErr.message })
+        return await getJsonFromUrl(url, 4, ip)
+      } catch (e2) { lastErr = e2 }
+    }
+    throw lastErr
+  }
 }
 
 // 备用更新源清单结构（单版本对象或 { releases: [...] } 均可）：
@@ -191,7 +219,7 @@ function parseFeed(data) {
 async function fetchFeed() {
   const feedUrl = String(getConfig().updateFeedUrl || '').trim()
   if (!feedUrl) return null
-  const data = await getJsonFromUrl(feedUrl)
+  const data = await getJsonWithFallback(feedUrl)
   const list = parseFeed(data)
   if (!list.length) throw new Error('备用更新源中没有有效版本信息')
   logger.info('updater', '已读取备用更新源', { feedUrl, versions: list.length })
@@ -387,19 +415,20 @@ function sourceLabel(url) {
 }
 
 // 下载到文件：.part 临时文件 → 完成后 rename；进度节流推送；支持取消
-function downloadTo(url, destPath, onProgress, isCancelled) {
+function downloadTo(url, destPath, onProgress, isCancelled, forceIp = null) {
   return new Promise((resolve, reject) => {
     const u = new URL(url)
     const req = https.get({
-      hostname: u.hostname,
+      hostname: forceIp || u.hostname,
       port: u.port || 443,
       path: u.pathname + u.search,
-      headers: { 'User-Agent': UA, Connection: 'close' },
+      servername: forceIp ? u.hostname : undefined,
+      headers: { 'User-Agent': UA, Connection: 'close', Host: u.hostname },
       timeout: 30000,
     }, (res) => {
       if ([301, 302, 307, 308].includes(res.statusCode) && res.headers.location) {
         res.resume()
-        return resolve(downloadTo(new URL(res.headers.location, u).href, destPath, onProgress, isCancelled))
+        return resolve(downloadWithFallback(new URL(res.headers.location, u).href, destPath, onProgress, isCancelled))
       }
       if (res.statusCode !== 200) {
         res.resume()
@@ -444,6 +473,29 @@ function downloadTo(url, destPath, onProgress, isCancelled) {
       reject(e)
     })
   })
+}
+
+// 带直连 IP 回退的下载：默认 DNS 失败（如命中返回 504 的边缘节点）后依次尝试可用 IP
+async function downloadWithFallback(url, destPath, onProgress, isCancelled) {
+  try {
+    return await downloadTo(url, destPath, onProgress, isCancelled)
+  } catch (e) {
+    let lastErr = e
+    if (isCancelled()) throw lastErr
+    let ips = []
+    try { ips = HOST_IPS[new URL(url).hostname] || [] } catch {}
+    for (const ip of ips) {
+      if (isCancelled()) throw lastErr
+      try {
+        logger.info('updater', `[selfupdate] 默认线路失败，通过 IP ${ip} 重试`, { error: lastErr.message })
+        return await downloadTo(url, destPath, onProgress, isCancelled, ip)
+      } catch (e2) {
+        lastErr = e2
+        try { fs.unlinkSync(destPath + '.part') } catch {}
+      }
+    }
+    throw lastErr
+  }
 }
 
 // 生成"等待进程退出后执行"的批处理脚本（内容纯 ASCII，路径经环境变量传入，规避中文/空格路径编码问题）
@@ -543,7 +595,7 @@ async function downloadAndInstall() {
       const url = urls[i]
       try {
         logger.info('updater', `[selfupdate] 下载线路 ${i + 1}/${urls.length}`, { url })
-        const { received } = await downloadTo(url, dest, (p) => {
+        const { received } = await downloadWithFallback(url, dest, (p) => {
           const percent = p.total ? Math.min(99, 3 + (p.received / p.total) * 94) : 3
           pushProgress({
             phase: 'download',
