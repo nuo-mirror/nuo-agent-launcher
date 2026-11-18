@@ -1,18 +1,18 @@
 {
-  "version": "1.4.4",
-  "name": "NUO OS v1.4.4",
-  "notes": "Polish: home page visual details and experience improvements. Fix: auto-update download now falls back to direct IPs when GitHub edge nodes fail.",
-  "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/tag/v1.4.4",
+  "version": "1.4.6",
+  "name": "NUO OS v1.4.6",
+  "notes": "New: a global AI floating window — click the sparkle bubble in the bottom-right corner on any page to chat, drag the panel anywhere, and it remembers its position. It reuses the built-in free AI channel (no API key needed). Both the AI page and floating window now support exporting the conversation to a Markdown (.md) file. New: in Vocaloid (术力口) mode the floating ball becomes Miku, Teto or Rei with three chibi pictures rotating, a small button / right-click switches to the next character, and the ball pops up playful lines; the AI also replies in that character's tone. Changed: the character no longer walks over the interface; selecting a character only switches the background theme using each character's original official illustration.",
+  "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/tag/v1.4.6",
   "assets": [
     {
       "name": "nuo-agent-launcher-portable.exe",
-      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.4/nuo-agent-launcher-portable.exe",
-      "size": 63951794
+      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.6/nuo-agent-launcher-portable.exe",
+      "size": 64916219
     },
     {
       "name": "nuo-agent-launcher-setup.exe",
-      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.4/nuo-agent-launcher-setup.exe",
-      "size": 64181028
+      "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.6/nuo-agent-launcher-setup.exe",
+      "size": 65145450
     }
   ]
 }

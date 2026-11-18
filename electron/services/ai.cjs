@@ -262,6 +262,40 @@ function register(ipcMain, getMainWindow) {
   })
   ipcMain.handle('ai:cancel', (_e, id) => cancel(id))
   ipcMain.handle('ai:speed-test', () => speedTest())
+  // 导出对话为 .md 文件
+  ipcMain.handle('ai:export', async (_e, messages, suggestedName) => {
+    const { dialog } = require('electron')
+    const fs = require('fs')
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return { success: false, error: '没有可导出的对话' }
+    }
+    const win = _mainWindowGetter && _mainWindowGetter()
+    const stamp = new Date().toISOString().slice(0, 10)
+    const defaultName = (suggestedName ? String(suggestedName).replace(/[\\/:*?"<>|]/g, '_') : 'ai-chat') + `-${stamp}.md`
+    const res = await dialog.showSaveDialog(win, {
+      title: '导出对话',
+      defaultPath: defaultName,
+      filters: [
+        { name: 'Markdown', extensions: ['md'] },
+        { name: '纯文本', extensions: ['txt'] },
+      ],
+    })
+    if (res.canceled || !res.filePath) return { success: false, error: '已取消' }
+    const lines = []
+    for (const m of messages) {
+      if (!m || !m.role || typeof m.content !== 'string') continue
+      const role = m.role === 'user' ? '我' : m.role === 'assistant' ? 'AI 助手' : m.role
+      lines.push(`### ${role}`)
+      lines.push('')
+      lines.push(m.content.trim())
+      lines.push('')
+      lines.push('---')
+      lines.push('')
+    }
+    fs.writeFileSync(res.filePath, lines.join('\n'), 'utf8')
+    logger.info('ai', '已导出对话', { to: res.filePath, count: messages.length })
+    return { success: true, filePath: res.filePath }
+  })
 }
 
 module.exports = { register, chat, speedTest }

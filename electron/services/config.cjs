@@ -40,6 +40,11 @@ const DEFAULT_CONFIG = {
   // 个性化：自定义背景图片（本地文件路径，'' = 无）、主题强调色（十六进制，'' = 默认）
   bgImage: '',
   accentColor: '',
+  // 术力口模式：角色主题 + 合成 BGM
+  vocaloidMode: false,
+  vocaloidBgm: true,
+  vocaloidTrack: 0,
+  vocaloidCharacter: 'miku',
 }
 
 function loadConfig() {

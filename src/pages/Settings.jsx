@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useConfigStore } from '../stores/config.js'
 import { notifyPersonalizeChanged } from '../utils/personalize.js'
 import Icon from '../components/Icon.jsx'
+import { getVocaloidCharacter, VOCALOID_CHARACTERS, VocaloidCharacterImage } from '../components/VocaloidCharacters.jsx'
 
 const SECTIONS = [
   { id: 'general', name: '通用', icon: 'settings' },
@@ -138,6 +139,65 @@ function GeneralSection({ config, update }) {
             </button>
           )}
         </div>
+      </Field>
+
+      <Field label="术力口模式" hint="三位角色主题 + 合成电子音乐，界面配色会随你选择的角色变化">
+        <div className="flex items-center gap-3">
+          <button
+            className={`btn ${config.vocaloidMode ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => update('vocaloidMode', !config.vocaloidMode)}
+          >
+            {config.vocaloidMode ? '已开启 ♪' : '开启术力口模式'}
+          </button>
+          {config.vocaloidMode && (
+            <>
+              <label className="flex items-center gap-1" style={{ fontSize: 13, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={config.vocaloidBgm !== false}
+                  onChange={(e) => update('vocaloidBgm', e.target.checked)}
+                />
+                背景音乐
+              </label>
+              <select
+                className="select"
+                value={config.vocaloidTrack || 0}
+                onChange={(e) => update('vocaloidTrack', parseInt(e.target.value))}
+                style={{ maxWidth: 160, fontSize: 13 }}
+              >
+                <option value={0}>Miku Dance</option>
+                <option value={1}>Digital Dream</option>
+                <option value={2}>Electric Leek</option>
+              </select>
+            </>
+          )}
+        </div>
+        {config.vocaloidMode && (
+          <div className="vocaloid-character-picker" role="group" aria-label="选择陪伴角色">
+            {VOCALOID_CHARACTERS.map((character) => {
+              const selected = getVocaloidCharacter(config.vocaloidCharacter).id === character.id
+              return (
+                <button
+                  type="button"
+                  key={character.id}
+                  className={`vocaloid-character-option ${selected ? 'selected' : ''}`}
+                  style={{ '--character-color': character.color }}
+                  onClick={() => update('vocaloidCharacter', character.id)}
+                  aria-pressed={selected}
+                >
+                  <span className="vocaloid-option-portrait">
+                    <VocaloidCharacterImage character={character} state="run" />
+                  </span>
+                  <span>
+                    <strong>{character.name}</strong>
+                    <small>{selected ? '正在陪你' : '选择这位角色'}</small>
+                  </span>
+                  <i>{selected ? '✓' : ''}</i>
+                </button>
+              )
+            })}
+          </div>
+        )}
       </Field>
 
       <Field label="下载源">

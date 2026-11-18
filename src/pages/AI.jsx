@@ -17,15 +17,29 @@ const SYSTEM_PROMPT = {
   content: '你是 NUO OS 内置的 AI 助手。请用简洁清晰的中文回答问题，针对 Minecraft 玩家和启动器用户的需求提供帮助。可以使用 Markdown 格式排版。不要输出思考过程，直接给出回答。',
 }
 
+// 对话历史保存在本地，重启应用后自动恢复（只保留最近 100 条）
+const HISTORY_KEY = 'nal.ai.history.page'
+const HISTORY_LIMIT = 100
+
+function loadHistory() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
+    return Array.isArray(raw) ? raw.filter((m) => m && m.role && typeof m.content === 'string') : []
+  } catch {
+    return []
+  }
+}
+
 export default function AIPage() {
   const config = useConfigStore((s) => s.config)
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState(loadHistory)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [streamingText, setStreamingText] = useState('')
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
   const [proxyState, setProxyState] = useState(null)
+  const [exportMsg, setExportMsg] = useState('')
 
   const handleSpeedTest = async () => {
     setProxyState({ testing: true })
@@ -34,16 +48,25 @@ export default function AIPage() {
   }
   const messagesEndRef = useRef(null)
   const reqIdRef = useRef(null)
+  // 只处理本页面发起的请求，避免与悬浮窗的事件互相串台
+  const activeRef = useRef(false)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingText])
 
   useEffect(() => {
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(messages.slice(-HISTORY_LIMIT))) } catch {}
+  }, [messages])
+
+  useEffect(() => {
     const unsubChunk = window.nal.ai.onChunk((data) => {
+      if (!activeRef.current) return
       setStreamingText((prev) => prev + data.text)
     })
     const unsubDone = window.nal.ai.onDone((data) => {
+      if (!activeRef.current) return
+      activeRef.current = false
       reqIdRef.current = null
       setStreamingText('')
       setStatus('')
@@ -53,6 +76,8 @@ export default function AIPage() {
       setLoading(false)
     })
     const unsubError = window.nal.ai.onError((data) => {
+      if (!activeRef.current) return
+      activeRef.current = false
       reqIdRef.current = null
       setStreamingText('')
       setStatus('')
@@ -60,6 +85,7 @@ export default function AIPage() {
       setError(data.error)
     })
     const unsubStatus = window.nal.ai.onStatus((data) => {
+      if (!activeRef.current) return
       setStatus(data.status || '')
     })
     return () => { unsubChunk(); unsubDone(); unsubError(); unsubStatus() }
@@ -74,6 +100,7 @@ export default function AIPage() {
     setInput('')
     setLoading(true)
     setStreamingText('')
+    activeRef.current = true
 
     try {
       const result = await window.nal.ai.chat([SYSTEM_PROMPT, ...newMessages], {
@@ -82,12 +109,14 @@ export default function AIPage() {
       })
       reqIdRef.current = result.reqId
     } catch (e) {
+      activeRef.current = false
       setError(e.message)
       setLoading(false)
     }
   }
 
   const handleStop = () => {
+    activeRef.current = false
     if (reqIdRef.current) {
       window.nal.ai.cancel(reqIdRef.current)
       reqIdRef.current = null
@@ -102,6 +131,27 @@ export default function AIPage() {
   const handleClear = () => {
     setMessages([])
     setError('')
+    setExportMsg('')
+  }
+
+  const handleExport = async () => {
+    if (messages.length === 0) {
+      setExportMsg('没有可导出的对话')
+      setTimeout(() => setExportMsg(''), 2500)
+      return
+    }
+    setExportMsg('正在导出...')
+    try {
+      const res = await window.nal.ai.export(messages, 'nuo-ai-chat')
+      if (res?.success) {
+        setExportMsg(`已导出到 ${res.filePath}`)
+      } else {
+        setExportMsg(res?.error || '导出失败')
+      }
+    } catch (e) {
+      setExportMsg(e.message || '导出失败')
+    }
+    setTimeout(() => setExportMsg(''), 3000)
   }
 
   return (
@@ -116,9 +166,19 @@ export default function AIPage() {
           <button className="btn btn-ghost btn-sm" onClick={handleSpeedTest} disabled={proxyState?.testing}>
             {proxyState?.testing ? <><span className="spinner" />测速中</> : <><Icon name="zap" size={14} /> AI 测速</>}
           </button>
+          <button className="btn btn-ghost btn-sm" onClick={handleExport} disabled={messages.length === 0}>
+            <Icon name="download" size={14} /> 导出对话
+          </button>
           <button className="btn btn-ghost btn-sm" onClick={handleClear}>清空对话</button>
         </div>
       </div>
+
+      {/* 导出提示 */}
+      {exportMsg && (
+        <div style={{ margin: '8px 24px 0' }}>
+          <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{exportMsg}</div>
+        </div>
+      )}
 
       {/* 测速结果 */}
       {proxyState && !proxyState.testing && (

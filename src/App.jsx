@@ -19,6 +19,10 @@ import { useUpdaterStore, isDownloading } from './stores/updater.js'
 import { loadPersonalization } from './utils/personalize.js'
 import { makeSequenceDetector, KONAMI, HEROBRINE } from './utils/easterEggs.js'
 import Icon from './components/Icon.jsx'
+import VocaloidLayer from './components/VocaloidLayer.jsx'
+import AIFloating from './components/AIFloating.jsx'
+import { getVocaloidCharacter } from './components/VocaloidCharacters.jsx'
+import vocaloidPlayer from './utils/vocaloid.js'
 import navMapTex from './assets/mc/navmap.png'
 import pkg from '../package.json'
 
@@ -71,6 +75,13 @@ export default function App() {
   const download = useUpdaterStore((s) => s.download)
   const setDownload = useUpdaterStore((s) => s.setDownload)
   const downloading = isDownloading(download)
+  // 术力口模式
+  const vocaloidMode = !!useConfigStore((s) => s.config?.vocaloidMode)
+  const vocaloidBgm = useConfigStore((s) => s.config?.vocaloidBgm) !== false
+  const vocaloidTrack = useConfigStore((s) => s.config?.vocaloidTrack) || 0
+  const vocaloidCharacter = getVocaloidCharacter(useConfigStore((s) => s.config?.vocaloidCharacter))
+  const [bgmPlaying, setBgmPlaying] = useState(false)
+
   // 主题直接从 config store 读取，切换时实时响应
   const theme = useConfigStore((s) => s.config?.theme) || 'dark'
   // 开发者模式：开启后导航栏在“开发者”后面追加“配色”菜单项
@@ -145,6 +156,28 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
 
+  // 角色主题与音乐分开响应，切换人物不会重启 BGM
+  useEffect(() => {
+    if (vocaloidMode) {
+      document.documentElement.setAttribute('data-vocaloid', 'true')
+      document.documentElement.setAttribute('data-vocaloid-character', vocaloidCharacter.id)
+    } else {
+      document.documentElement.removeAttribute('data-vocaloid')
+      document.documentElement.removeAttribute('data-vocaloid-character')
+    }
+    return () => {
+      document.documentElement.removeAttribute('data-vocaloid')
+      document.documentElement.removeAttribute('data-vocaloid-character')
+    }
+  }, [vocaloidMode, vocaloidCharacter.id])
+
+  useEffect(() => {
+    if (vocaloidMode && vocaloidBgm) vocaloidPlayer.start(vocaloidTrack)
+    else vocaloidPlayer.stop()
+    setBgmPlaying(vocaloidPlayer.playing)
+    return () => { vocaloidPlayer.stop() }
+  }, [vocaloidMode, vocaloidBgm, vocaloidTrack])
+
   // 个性化：自定义背景图 + 主题强调色（Settings 修改后通过事件触发重载）
   const [bgImage, setBgImage] = useState(null)
   useEffect(() => {
@@ -216,6 +249,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {vocaloidMode && <VocaloidLayer characterId={vocaloidCharacter.id} />}
       <aside className="sidebar">
         <div className="sidebar-header">
           <div className="logo" onClick={onLogoClick} style={{ cursor: 'default', userSelect: 'none' }}>
@@ -232,6 +266,22 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-footer">
+          {vocaloidMode && (
+            <div className="vocaloid-bgm-bar" style={{ marginBottom: 8 }}>
+              <button onClick={() => { const i = vocaloidPlayer.prev(); useConfigStore.getState().set('vocaloidTrack', i) }} title="上一首">⏮</button>
+              <button onClick={() => {
+                if (vocaloidPlayer.playing) vocaloidPlayer.stop()
+                else vocaloidPlayer.start(vocaloidTrack)
+                setBgmPlaying(vocaloidPlayer.playing)
+              }} title={bgmPlaying ? '暂停' : '播放'}>
+                {bgmPlaying ? '⏸' : '▶'}
+              </button>
+              <button onClick={() => { const i = vocaloidPlayer.next(); useConfigStore.getState().set('vocaloidTrack', i) }} title="下一首">⏭</button>
+              <span style={{ flex: 1, textAlign: 'center', fontSize: 11, opacity: 0.8 }}>
+                {vocaloidPlayer.getTrackName()}
+              </span>
+            </div>
+          )}
           {devMode && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6,
@@ -314,6 +364,7 @@ export default function App() {
           <Route path="/colors" element={<ColorsPage />} />
         </Routes>
       </main>
+      <AIFloating />
       <style>{`
         .app-shell { display: flex; height: 100%; }
         .sidebar {

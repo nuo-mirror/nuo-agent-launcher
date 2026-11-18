@@ -125,6 +125,7 @@ contextBridge.exposeInMainWorld('nal', {
     chat: (messages, opts) => invoke('ai:chat', messages, opts),
     cancel: (id) => invoke('ai:cancel', id),
     speedTest: () => invoke('ai:speed-test'),
+    export: (messages, suggestedName) => invoke('ai:export', messages, suggestedName),
     onChunk: (cb) => onEvent('ai:chunk', cb),
     onDone: (cb) => onEvent('ai:done', cb),
     onError: (cb) => onEvent('ai:error', cb),

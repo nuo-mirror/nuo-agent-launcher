@@ -237,3 +237,525 @@ a:hover { color: var(--accent-hover); }
 .text-center { text-align: center; }
 .relative { position: relative; }
 .absolute { position: absolute; }
+
+/* ===== 术力口模式：三角色主题 ===== */
+[data-vocaloid="true"][data-vocaloid-character="miku"] {
+  --accent: #39C5BB;
+  --accent-hover: #64DDD3;
+  --vocaloid-rgb: 57, 197, 187;
+  --vocaloid-secondary: #167F91;
+  --vocaloid-on-accent: #062D31;
+}
+
+[data-vocaloid="true"][data-vocaloid-character="teto"] {
+  --accent: #F2545B;
+  --accent-hover: #FF7B81;
+  --vocaloid-rgb: 242, 84, 91;
+  --vocaloid-secondary: #A9264B;
+  --vocaloid-on-accent: #3B0812;
+}
+
+[data-vocaloid="true"][data-vocaloid-character="rei"] {
+  --accent: #F59E67;
+  --accent-hover: #FFBC8F;
+  --vocaloid-rgb: 245, 158, 103;
+  --vocaloid-secondary: #A95E38;
+  --vocaloid-on-accent: #321A0E;
+}
+
+[data-vocaloid="true"] {
+  --accent-dim: rgba(var(--vocaloid-rgb), 0.15);
+  --accent-glow: rgba(var(--vocaloid-rgb), 0.4);
+  --bg-gradient: var(--vocaloid-bg);
+}
+
+[data-vocaloid="true"][data-vocaloid-character="miku"][data-theme="dark"] {
+  --vocaloid-bg: linear-gradient(160deg, #071A1B 0%, #0F2020 40%, #0D1A2E 100%);
+}
+[data-vocaloid="true"][data-vocaloid-character="miku"][data-theme="light"] {
+  --vocaloid-bg: linear-gradient(160deg, #F0FFFE 0%, #E0F7F5 40%, #D4EEF5 100%);
+}
+[data-vocaloid="true"][data-vocaloid-character="teto"][data-theme="dark"] {
+  --vocaloid-bg: linear-gradient(160deg, #1C0C15 0%, #241019 42%, #151325 100%);
+}
+[data-vocaloid="true"][data-vocaloid-character="teto"][data-theme="light"] {
+  --vocaloid-bg: linear-gradient(160deg, #FFF6F6 0%, #FDE8EC 45%, #F3E5F2 100%);
+}
+[data-vocaloid="true"][data-vocaloid-character="rei"][data-theme="dark"] {
+  --vocaloid-bg: linear-gradient(160deg, #17191F 0%, #211D1B 45%, #152027 100%);
+}
+[data-vocaloid="true"][data-vocaloid-character="rei"][data-theme="light"] {
+  --vocaloid-bg: linear-gradient(160deg, #FFFAF3 0%, #F7F0E8 45%, #E7F0F2 100%);
+}
+
+/* 无交互背景装饰 */
+.vocaloid-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.vocaloid-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(var(--vocaloid-rgb), 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--vocaloid-rgb), 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.vocaloid-layer .vocaloid-backdrop-character {
+  position: absolute;
+  right: 1%;
+  top: 48%;
+  width: 330px;
+  height: 390px;
+  object-fit: contain;
+  transform: translateY(-50%) rotate(4deg);
+  opacity: 0.07;
+  filter: saturate(1.4) drop-shadow(0 0 40px rgba(var(--vocaloid-rgb), 0.2));
+}
+
+.vocaloid-notes {
+  position: absolute;
+  inset: 0;
+}
+
+.vocaloid-note {
+  position: absolute;
+  bottom: -40px;
+  color: var(--accent);
+  animation: vocaloid-float linear infinite;
+  pointer-events: none;
+  user-select: none;
+}
+
+@keyframes vocaloid-float {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10%, 90% { opacity: var(--note-opacity, 0.15); }
+  100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
+}
+
+.vocaloid-glow {
+  position: absolute;
+  bottom: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 300px;
+  background: radial-gradient(ellipse, rgba(var(--vocaloid-rgb), 0.09) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+[data-vocaloid="true"] .nav-item.active {
+  background: rgba(var(--vocaloid-rgb), 0.13) !important;
+  color: var(--accent) !important;
+}
+
+[data-vocaloid="true"] .btn-primary {
+  color: var(--vocaloid-on-accent) !important;
+  background: linear-gradient(135deg, var(--accent), var(--vocaloid-secondary)) !important;
+}
+
+[data-vocaloid="true"] .logo-mark {
+  color: var(--vocaloid-on-accent);
+  background: linear-gradient(135deg, var(--accent), var(--vocaloid-secondary));
+}
+
+/* BGM 控制条 */
+.vocaloid-bgm-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px;
+  background: rgba(var(--vocaloid-rgb), 0.08);
+  border: 1px solid rgba(var(--vocaloid-rgb), 0.2);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.vocaloid-bgm-bar button {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+
+.vocaloid-bgm-bar button:hover { background: rgba(var(--vocaloid-rgb), 0.15); }
+.vocaloid-bgm-bar span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 角色选择卡片 */
+.vocaloid-character-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+  width: 100%;
+}
+
+.vocaloid-character-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  text-align: left;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-tertiary);
+  transition: border-color var(--transition), background var(--transition), transform var(--transition);
+}
+
+.vocaloid-character-option:hover {
+  transform: translateY(-2px);
+  border-color: var(--character-color);
+}
+
+.vocaloid-character-option.selected {
+  border-color: var(--character-color);
+  background: color-mix(in srgb, var(--character-color) 12%, var(--bg-tertiary));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--character-color) 12%, transparent);
+}
+
+.vocaloid-option-portrait {
+  display: block;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 58px;
+  overflow: hidden;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--character-color) 12%, transparent);
+}
+
+.vocaloid-option-portrait .vocaloid-character-img { width: 48px; height: 58px; filter: none; }
+.vocaloid-character-option strong { display: block; font-size: 12px; white-space: nowrap; }
+.vocaloid-character-option small { display: block; margin-top: 4px; color: var(--text-tertiary); font-size: 10px; }
+.vocaloid-character-option > i { margin-left: auto; color: var(--character-color); font-style: normal; font-weight: 700; }
+
+/* 角色立绘（三层结构：头 / 躯干 / 腿） */
+.vocaloid-character-img {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  -webkit-user-drag: none;
+  transform-origin: center bottom;
+}
+
+.vcg-layers {
+  position: absolute;
+  inset: 0;
+  display: block;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.35));
+  will-change: transform;
+}
+
+.vcg-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  user-select: none;
+  -webkit-user-drag: none;
+  backface-visibility: hidden;
+}
+
+/* 三层划分（从上到下）：头 26% + 躯干(含手臂) 32% + 胯腿 46%，带 1% 重叠避免缝隙 */
+.vcg-head  { clip-path: inset(0% 0% 73% 0%);   transform-origin: 50% 82%;   z-index: 3; }
+.vcg-torso { clip-path: inset(25% 0% 44% 0%);  transform-origin: 50% 85%;   z-index: 2; }
+.vcg-legs  { clip-path: inset(52% 0% -2% 0%);  transform-origin: 50% 100%;  z-index: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vocaloid-note { display: none; animation: none; }
+  .vocaloid-character-option { transition: none; }
+}
+
+/* ===== AI 悬浮窗 ===== */
+.ai-float-fab {
+  position: fixed;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #7c4dff);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32), 0 0 0 6px color-mix(in srgb, var(--accent) 10%, transparent);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  transition: box-shadow 0.18s ease;
+}
+.ai-float-fab:hover {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.36), 0 0 0 8px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.ai-float-fab.is-dragging {
+  cursor: grabbing;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.42), 0 0 0 10px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* 术力口模式：悬浮球换成角色 Q 版头像 */
+.ai-float-fab.is-vocaloid {
+  overflow: hidden;
+  padding: 0;
+  border: 2px solid rgba(var(--vocaloid-rgb, 57, 197, 187), 0.55);
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32), 0 0 0 6px rgba(var(--vocaloid-rgb, 57, 197, 187), 0.14);
+  animation: ai-fab-bob 3.2s ease-in-out infinite;
+}
+.ai-float-fab.is-vocaloid:hover {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.36), 0 0 0 8px rgba(var(--vocaloid-rgb, 57, 197, 187), 0.2);
+}
+.ai-float-fab.is-vocaloid.is-dragging { animation: none; }
+.ai-float-fab-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+@keyframes ai-fab-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* 术力口模式：悬浮球冒出的俏皮话气泡 */
+.ai-float-say {
+  position: fixed;
+  z-index: 70;
+  max-width: 190px;
+  padding: 7px 11px;
+  border: 1px solid rgba(var(--vocaloid-rgb, 57, 197, 187), 0.42);
+  border-radius: 12px;
+  background: var(--bg-elevated, var(--bg-card));
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  animation: ai-say-in 0.22s ease-out;
+}
+.ai-float-say::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  background: var(--bg-elevated, var(--bg-card));
+  border: 1px solid rgba(var(--vocaloid-rgb, 57, 197, 187), 0.42);
+  transform: translateY(-50%) rotate(45deg);
+}
+.ai-float-say.is-left { transform: translate(-100%, -50%) translateX(-10px); }
+.ai-float-say.is-left::after { right: -5px; border-left: 0; border-bottom: 0; }
+.ai-float-say.is-right { transform: translateY(-50%) translateX(60px); }
+.ai-float-say.is-right::after { left: -5px; border-right: 0; border-top: 0; }
+@keyframes ai-say-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 术力口模式：悬浮球右下角的换角色小按钮 */
+.ai-float-switch {
+  position: fixed;
+  z-index: 72;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  background: var(--bg-elevated, var(--bg-card));
+  color: var(--text-secondary);
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.24);
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.ai-float-switch:hover { transform: rotate(90deg); color: var(--accent); }
+
+/* 面板标题栏的角色头像 */
+.ai-float-head-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #fff;
+}
+
+.ai-float-panel {
+  position: fixed;
+  z-index: 71;
+  display: flex;
+  flex-direction: column;
+  width: 352px;
+  height: 470px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--bg-elevated, var(--bg-secondary));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  animation: ai-float-in 0.16s ease-out;
+}
+
+@keyframes ai-float-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ai-float-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+.ai-float-head:active { cursor: grabbing; }
+
+.ai-float-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ai-float-actions { display: flex; align-items: center; gap: 4px; }
+.ai-float-actions button {
+  padding: 3px 7px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  cursor: pointer;
+}
+.ai-float-actions button:hover { border-color: var(--border-color); color: var(--text-primary); }
+.ai-float-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.ai-float-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-float-empty { margin: auto; text-align: center; color: var(--text-tertiary); }
+.ai-float-empty-icon { color: var(--accent); opacity: 0.85; margin-bottom: 6px; }
+.ai-float-empty p { margin: 0 0 10px; font-size: 11.5px; }
+
+.ai-float-quick { display: grid; gap: 6px; }
+.ai-float-quick button {
+  padding: 6px 9px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+.ai-float-quick button:hover { border-color: var(--accent); color: var(--text-primary); }
+
+.ai-float-msg { display: flex; }
+.ai-float-msg.is-user { justify-content: flex-end; }
+.ai-float-bubble {
+  max-width: 86%;
+  padding: 8px 11px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ai-float-msg.is-user .ai-float-bubble {
+  background: var(--accent-dim);
+  border: 1px solid transparent;
+  color: var(--text-primary);
+  border-bottom-right-radius: 3px;
+}
+.ai-float-msg.is-ai .ai-float-bubble {
+  background: var(--bg-card, var(--bg-tertiary));
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-bottom-left-radius: 3px;
+}
+
+.ai-float-loading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-tertiary);
+  font-size: 11.5px;
+}
+
+.ai-float-error {
+  display: flex;
+  gap: 6px;
+  padding: 7px 9px;
+  border: 1px solid var(--error);
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--error);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.ai-float-notice {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--accent-dim);
+  color: var(--text-primary);
+  font-size: 11px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.ai-float-input {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  border-top: 1px solid var(--border-color);
+}
+.ai-float-input textarea {
+  flex: 1;
+  min-height: 34px;
+  max-height: 96px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  resize: none;
+}
+.ai-float-input textarea:focus { outline: none; border-color: var(--accent); }
+
