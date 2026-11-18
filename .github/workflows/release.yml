@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要发布资产的 Release 标签（如 v1.4.6）'
+        required: true
+        default: 'v1.4.6'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-upload:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装依赖
+        run: npm install --no-audit --no-fund
+
+      - name: 构建前端
+        run: npm run build:web
+
+      - name: 打包 Windows 安装包
+        run: npx electron-builder --win --x64 --publish never
+
+      - name: 上传到 Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ inputs.tag }}" \
+            dist-release/nuo-agent-launcher-portable.exe \
+            dist-release/nuo-agent-launcher-setup.exe --clobber
