@@ -263,6 +263,14 @@ a:hover { color: var(--accent-hover); }
   --vocaloid-on-accent: #321A0E;
 }
 
+[data-vocaloid="true"][data-vocaloid-character="tianyi"] {
+  --accent: #66CCFF;
+  --accent-hover: #8FDBFF;
+  --vocaloid-rgb: 102, 204, 255;
+  --vocaloid-secondary: #2B7FCC;
+  --vocaloid-on-accent: #06233A;
+}
+
 [data-vocaloid="true"] {
   --accent-dim: rgba(var(--vocaloid-rgb), 0.15);
   --accent-glow: rgba(var(--vocaloid-rgb), 0.4);
@@ -286,6 +294,12 @@ a:hover { color: var(--accent-hover); }
 }
 [data-vocaloid="true"][data-vocaloid-character="rei"][data-theme="light"] {
   --vocaloid-bg: linear-gradient(160deg, #FFFAF3 0%, #F7F0E8 45%, #E7F0F2 100%);
+}
+[data-vocaloid="true"][data-vocaloid-character="tianyi"][data-theme="dark"] {
+  --vocaloid-bg: linear-gradient(160deg, #081726 0%, #0C2033 45%, #0A1A2E 100%);
+}
+[data-vocaloid="true"][data-vocaloid-character="tianyi"][data-theme="light"] {
+  --vocaloid-bg: linear-gradient(160deg, #F2FBFF 0%, #E3F4FF 45%, #E8EEFF 100%);
 }
 
 /* 无交互背景装饰 */

@@ -24,6 +24,9 @@ const HISTORY_LIMIT = 60
 const AVATAR_SWITCH_MS = 2600
 const SAY_SWITCH_MS = 9000
 
+// 每次启动（打开窗口）只自动切换一次角色形态
+let launchFormCycled = false
+
 function loadHistory() {
   try {
     const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
@@ -114,6 +117,17 @@ export default function AIFloating() {
     }, SAY_SWITCH_MS)
     return () => clearInterval(timer)
   }, [vocaloidMode, character.id])
+
+  // 每次打开应用窗口时自动切到下一位角色的形态（每次启动只执行一次）
+  useEffect(() => {
+    if (launchFormCycled) return
+    if (config?.vocaloidCharacter === undefined) return
+    launchFormCycled = true
+    if (!config.vocaloidMode) return
+    const i = VOCALOID_CHARACTERS.findIndex((c) => c.id === config.vocaloidCharacter)
+    const next = VOCALOID_CHARACTERS[(i + 1) % VOCALOID_CHARACTERS.length]
+    setConfigValue('vocaloidCharacter', next.id)
+  }, [config, setConfigValue])
 
   // 切换到下一位角色（写回配置，同步主题与设置页）
   const cycleCharacter = () => {

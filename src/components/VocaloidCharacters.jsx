@@ -18,6 +18,10 @@ import tetoShock from '../assets/vocaloid/teto-shock.png'
 import reiSide from '../assets/vocaloid/rei-side.png'
 import reiMushroom from '../assets/vocaloid/rei-mushroom.png'
 import reiArt from '../assets/vocaloid/rei-art.png'
+import luoYawn from '../assets/vocaloid/luo-yawn.png'
+import luoCry from '../assets/vocaloid/luo-cry.png'
+import luoLine from '../assets/vocaloid/luo-line.png'
+import luoOfficial from '../assets/vocaloid/luo-official.png'
 
 export const VOCALOID_CHARACTERS = [
   {
@@ -76,6 +80,25 @@ export const VOCALOID_CHARACTERS = [
     persona: '你是足立零（Rei），冷静的机械少女，说话简洁但偶尔冒出一句可爱的机械式吐槽，喜欢用"检测到/运算结果"开头。',
     artist: 'Official design by missile39',
     license: 'UTAU / Mechanical Girl 官方设定图',
+  },
+  {
+    id: 'tianyi',
+    name: '洛天依',
+    shortName: 'Tianyi',
+    color: '#66CCFF',
+    images: { run: luoOfficial, rest: luoOfficial },
+    avatars: [luoYawn, luoCry, luoLine],
+    lines: ['一起唱首中文歌吧！', '天依今天也在练声～', '蓝色的天空，好想飞！'],
+    playful: [
+      '要不要一起吃小笼包？',
+      '又熬夜练歌，好困……',
+      '我的绿色蝴蝶结好看吗？',
+      '唱到高音要记得给我鼓掌哦。',
+      '呜哇——这段旋律太难了啦！',
+    ],
+    persona: '你是洛天依，中文 VOCALOID 虚拟歌手，声音清澈，性格温柔又有点小迷糊，最喜欢唱歌和小笼包。',
+    artist: '官方形象 / 上海禾念',
+    license: '官方角色形象，个人非商业使用',
   },
 ]
 
