@@ -7,12 +7,12 @@
     {
       "name": "nuo-agent-launcher-portable.exe",
       "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.7/nuo-agent-launcher-portable.exe",
-      "size": 66595215
+      "size": 66599115
     },
     {
       "name": "nuo-agent-launcher-setup.exe",
       "url": "https://github.com/nuo-mirror/nuo-agent-launcher/releases/download/v1.4.7/nuo-agent-launcher-setup.exe",
-      "size": 66824454
+      "size": 66828346
     }
   ]
 }
